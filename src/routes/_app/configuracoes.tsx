@@ -1,13 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
-import { User, Sun, Moon, Monitor, Download, Upload, Trash2, FileSpreadsheet } from 'lucide-react'
+import { User, Sun, Moon, Monitor, Download, Upload, Trash2, FileSpreadsheet, CalendarClock } from 'lucide-react'
 import { blink, exportAllData, importAllData, clearAllData } from '@/blink/client'
 import {
   parseCsv, detectColumnMapping, mapRowToPatient,
   PATIENT_FIELD_LABELS, type ParsedCsv, type PatientField,
 } from '@/lib/patientImport'
 import { useAuth } from '@/hooks/useAuth'
+import { useGoogleCalendar } from '@/hooks/useGoogleCalendar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -46,6 +47,8 @@ function SettingsPage() {
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const csvInputRef = useRef<HTMLInputElement>(null)
+  const googleCalendar = useGoogleCalendar()
+  const [connectingGoogle, setConnectingGoogle] = useState(false)
 
   const [name, setName] = useState(user?.displayName || '')
   const [email, setEmail] = useState(user?.email || '')
@@ -146,6 +149,18 @@ function SettingsPage() {
     }
   }
 
+  const handleGoogleConnect = async () => {
+    setConnectingGoogle(true)
+    try {
+      await googleCalendar.connect()
+      toast.success('Google Calendar conectado! Novas consultas serao sincronizadas.')
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro ao conectar com o Google')
+    } finally {
+      setConnectingGoogle(false)
+    }
+  }
+
   const handleClearData = async () => {
     if (!confirm('Isso vai apagar TODOS os pacientes, consultas, transacoes e prontuarios cadastrados. Esta acao nao pode ser desfeita. Continuar?')) return
     try {
@@ -219,6 +234,39 @@ function SettingsPage() {
                 {label}
               </button>
             ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Integracoes */}
+      <Card className="border-border/60">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base flex items-center gap-2">
+            <CalendarClock className="size-4" /> Integracoes
+          </CardTitle>
+          <CardDescription>
+            Conecte seu Google Calendar para que novas consultas apareçam automaticamente na sua agenda do Google.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 px-4 py-3">
+            <div>
+              <p className="text-sm font-medium">Google Calendar</p>
+              <p className="text-xs text-muted-foreground">
+                {googleCalendar.connected
+                  ? 'Conectado — a conexao dura cerca de 1 hora, reconecte quando expirar.'
+                  : 'Nao conectado'}
+              </p>
+            </div>
+            {googleCalendar.connected ? (
+              <Button type="button" variant="outline" size="sm" onClick={googleCalendar.disconnect}>
+                Desconectar
+              </Button>
+            ) : (
+              <Button type="button" variant="outline" size="sm" onClick={handleGoogleConnect} disabled={connectingGoogle}>
+                {connectingGoogle ? 'Conectando...' : 'Conectar'}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

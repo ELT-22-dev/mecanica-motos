@@ -18,7 +18,7 @@ function AppLayoutRoute() {
 
 function LayoutSkeleton() {
   return (
-    <div className="flex min-h-dvh">
+    <div className="flex h-dvh overflow-hidden">
       <div className="hidden md:block w-[15rem] shrink-0 border-r border-border bg-sidebar animate-pulse" />
       <div className="flex flex-1 flex-col">
         <div className="md:hidden flex items-center gap-3 px-4 h-14 border-b border-border" />

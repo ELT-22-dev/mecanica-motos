@@ -9,6 +9,7 @@ import {
   MoreHorizontal, ChevronDown, Filter, MessageCircle,
 } from 'lucide-react'
 import { openWhatsApp, buildAppointmentReminderMessage } from '@/lib/whatsapp'
+import { deleteEvent as deleteGoogleEvent } from '@/lib/googleCalendar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -23,7 +24,7 @@ import { toast } from 'sonner'
 interface Appointment {
   id: string; patient_id: string; patient_name: string; dentist_name: string | null
   date: string; time: string; type: string; room: string | null
-  notes: string | null; status: string; created_at: string
+  notes: string | null; status: string; created_at: string; google_event_id: string | null
 }
 
 interface Patient {
@@ -154,15 +155,21 @@ function ConsultasPage() {
       await blink.db.table('appointments').update(id, { status } as any)
       queryClient.invalidateQueries({ queryKey: ['appointments'] })
       toast.success('Status atualizado')
+      if (status === 'cancelled' || status === 'no_show') {
+        const appt = appointments.find((a) => a.id === id)
+        if (appt?.google_event_id) deleteGoogleEvent(appt.google_event_id)
+      }
     } catch (err: any) { toast.error(err?.message || 'Erro') }
   }
 
   const deleteAppt = async (id: string) => {
     if (!confirm('Excluir esta consulta?')) return
     try {
+      const appt = appointments.find((a) => a.id === id)
       await blink.db.table('appointments').delete(id)
       queryClient.invalidateQueries({ queryKey: ['appointments'] })
       toast.success('Consulta removida')
+      if (appt?.google_event_id) deleteGoogleEvent(appt.google_event_id)
     } catch (err: any) { toast.error(err?.message || 'Erro') }
   }
 

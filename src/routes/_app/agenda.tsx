@@ -7,6 +7,8 @@ import {
   MoreHorizontal, Edit, Trash2, CheckCircle, XCircle, UserX, Play, MessageCircle
 } from 'lucide-react'
 import { openWhatsApp, buildAppointmentReminderMessage } from '@/lib/whatsapp'
+import { createEvent as createGoogleEvent, deleteEvent as deleteGoogleEvent } from '@/lib/googleCalendar'
+import { useGoogleCalendar } from '@/hooks/useGoogleCalendar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -24,7 +26,7 @@ import { toast } from 'sonner'
 interface Appointment {
   id: string; patient_id: string; patient_name: string; dentist_name: string | null
   date: string; time: string; type: string; room: string | null
-  notes: string | null; status: string
+  notes: string | null; status: string; google_event_id: string | null
 }
 
 interface Patient {
@@ -38,6 +40,7 @@ export const Route = createFileRoute('/_app/agenda')({
 
 function AgendaPage() {
   const queryClient = useQueryClient()
+  const googleCalendar = useGoogleCalendar()
   const today = new Date().toISOString().slice(0, 10)
   const [selectedDate, setSelectedDate] = useState(today)
   const [newApptOpen, setNewApptOpen] = useState(false)
@@ -102,15 +105,21 @@ function AgendaPage() {
       await blink.db.table('appointments').update(id, { status } as any)
       queryClient.invalidateQueries({ queryKey: ['appointments'] })
       toast.success('Status atualizado')
+      if (status === 'cancelled' || status === 'no_show') {
+        const appt = appointments.find((a) => a.id === id)
+        if (appt?.google_event_id) deleteGoogleEvent(appt.google_event_id)
+      }
     } catch (err: any) { toast.error(err?.message || 'Erro') }
   }
 
   const deleteAppt = async (id: string) => {
     if (!confirm('Excluir esta consulta?')) return
     try {
+      const appt = appointments.find((a) => a.id === id)
       await blink.db.table('appointments').delete(id)
       queryClient.invalidateQueries({ queryKey: ['appointments'] })
       toast.success('Consulta removida')
+      if (appt?.google_event_id) deleteGoogleEvent(appt.google_event_id)
     } catch (err: any) { toast.error(err?.message || 'Erro') }
   }
 
@@ -120,7 +129,7 @@ function AgendaPage() {
       return
     }
     try {
-      await blink.db.table('appointments').create({
+      const created = await blink.db.table<Appointment>('appointments').create({
         ...apptForm,
         date: selectedDate,
         status: 'scheduled',
@@ -130,6 +139,24 @@ function AgendaPage() {
       setNewApptOpen(false)
       setApptForm({ patient_id: '', patient_name: '', dentist_name: '', time: '', type: 'Consulta', room: '', notes: '' })
       toast.success('Consulta agendada!')
+
+      if (googleCalendar.connected) {
+        try {
+          const eventId = await createGoogleEvent({
+            patientName: created.patient_name,
+            type: created.type,
+            date: created.date,
+            time: created.time,
+            dentistName: created.dentist_name,
+            room: created.room,
+            notes: created.notes,
+          })
+          await blink.db.table('appointments').update(created.id, { google_event_id: eventId } as any)
+          queryClient.invalidateQueries({ queryKey: ['appointments'] })
+        } catch (err: any) {
+          toast.error(err?.message || 'Consulta salva, mas nao sincronizou com o Google Calendar')
+        }
+      }
     } catch (err: any) { toast.error(err?.message || 'Erro') }
   }
 

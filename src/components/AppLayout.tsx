@@ -18,7 +18,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-dvh">
+      <div className="flex h-dvh overflow-hidden">
         <div className="hidden md:block w-[15rem] shrink-0 border-r border-border bg-sidebar animate-pulse" />
         <div className="flex flex-1 items-center justify-center">
           <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -32,7 +32,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-dvh">
+    <div className="flex h-dvh overflow-hidden">
       <aside className="hidden md:block shrink-0">
         <AppSidebar user={user} />
       </aside>
