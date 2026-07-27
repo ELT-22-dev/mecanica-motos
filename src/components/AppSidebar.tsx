@@ -16,6 +16,7 @@ import {
   Wrench,
   Package,
   DollarSign,
+  BarChart3,
   Settings,
   LogOut,
   PanelLeft,
@@ -38,6 +39,7 @@ const NAV_ITEMS: NavItemDef[] = [
   { href: '/ordens-servico', icon: <Wrench className="size-4" />, label: 'Ordens de Servico' },
   { href: '/estoque', icon: <Package className="size-4" />, label: 'Estoque' },
   { href: '/financeiro', icon: <DollarSign className="size-4" />, label: 'Financeiro' },
+  { href: '/relatorios', icon: <BarChart3 className="size-4" />, label: 'Relatorios' },
 ]
 
 const BOTTOM_ITEMS: NavItemDef[] = [
