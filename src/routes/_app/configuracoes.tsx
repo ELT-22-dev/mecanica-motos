@@ -9,6 +9,7 @@ import {
 } from '@/lib/patientImport'
 import { useAuth } from '@/hooks/useAuth'
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar'
+import { createEvent as createGoogleEvent } from '@/lib/googleCalendar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -49,6 +50,7 @@ function SettingsPage() {
   const csvInputRef = useRef<HTMLInputElement>(null)
   const googleCalendar = useGoogleCalendar()
   const [connectingGoogle, setConnectingGoogle] = useState(false)
+  const [syncingAppointments, setSyncingAppointments] = useState(false)
 
   const [name, setName] = useState(user?.displayName || '')
   const [email, setEmail] = useState(user?.email || '')
@@ -161,6 +163,49 @@ function SettingsPage() {
     }
   }
 
+  const handleSyncPendingAppointments = async () => {
+    setSyncingAppointments(true)
+    try {
+      const today = new Date().toISOString().slice(0, 10)
+      const appointments = await blink.db.table<{
+        id: string; patient_name: string; type: string; date: string; time: string
+        dentist_name: string | null; room: string | null; notes: string | null
+        status: string; google_event_id: string | null
+      }>('appointments').list()
+      const pending = appointments.filter(
+        (a) => !a.google_event_id && a.date >= today && (a.status === 'scheduled' || a.status === 'confirmed')
+      )
+      if (pending.length === 0) {
+        toast.success('Nenhuma consulta pendente para sincronizar')
+        return
+      }
+      let success = 0
+      for (const appt of pending) {
+        try {
+          const eventId = await createGoogleEvent({
+            patientName: appt.patient_name,
+            type: appt.type,
+            date: appt.date,
+            time: appt.time,
+            dentistName: appt.dentist_name,
+            room: appt.room,
+            notes: appt.notes,
+          })
+          await blink.db.table('appointments').update(appt.id, { google_event_id: eventId } as any)
+          success++
+        } catch {
+          // keep going with the rest
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: ['appointments'] })
+      toast.success(`${success} de ${pending.length} consulta${pending.length !== 1 ? 's' : ''} sincronizada${success !== 1 ? 's' : ''}`)
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro ao sincronizar consultas')
+    } finally {
+      setSyncingAppointments(false)
+    }
+  }
+
   const handleClearData = async () => {
     if (!confirm('Isso vai apagar TODOS os pacientes, consultas, transacoes e prontuarios cadastrados. Esta acao nao pode ser desfeita. Continuar?')) return
     try {
@@ -259,9 +304,14 @@ function SettingsPage() {
               </p>
             </div>
             {googleCalendar.connected ? (
-              <Button type="button" variant="outline" size="sm" onClick={googleCalendar.disconnect}>
-                Desconectar
-              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={handleSyncPendingAppointments} disabled={syncingAppointments}>
+                  {syncingAppointments ? 'Sincronizando...' : 'Sincronizar pendentes'}
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={googleCalendar.disconnect}>
+                  Desconectar
+                </Button>
+              </div>
             ) : (
               <Button type="button" variant="outline" size="sm" onClick={handleGoogleConnect} disabled={connectingGoogle}>
                 {connectingGoogle ? 'Conectando...' : 'Conectar'}
