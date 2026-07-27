@@ -153,6 +153,7 @@ function AgendaPage() {
           })
           await blink.db.table('appointments').update(created.id, { google_event_id: eventId } as any)
           queryClient.invalidateQueries({ queryKey: ['appointments'] })
+          toast.success('Sincronizado com o Google Calendar')
         } catch (err: any) {
           toast.error(err?.message || 'Consulta salva, mas nao sincronizou com o Google Calendar')
         }
@@ -301,6 +302,11 @@ function AgendaPage() {
           <DialogHeader>
             <DialogTitle>Nova Consulta</DialogTitle>
           </DialogHeader>
+          {!googleCalendar.connected && (
+            <p className="text-xs text-muted-foreground bg-muted rounded-md px-3 py-2">
+              Google Calendar nao conectado — esta consulta ficara so no OdontoManage. Conecte em Configuracoes para sincronizar.
+            </p>
+          )}
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label>Paciente *</Label>

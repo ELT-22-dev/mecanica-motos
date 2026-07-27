@@ -62,7 +62,7 @@ function loadGis(): Promise<void> {
 function getStoredToken(): StoredToken | null {
   if (typeof window === 'undefined') return null
   try {
-    const raw = sessionStorage.getItem(TOKEN_STORAGE_KEY)
+    const raw = localStorage.getItem(TOKEN_STORAGE_KEY)
     if (!raw) return null
     const token = JSON.parse(raw) as StoredToken
     if (token.expiresAt <= Date.now()) return null
@@ -74,7 +74,7 @@ function getStoredToken(): StoredToken | null {
 
 function saveToken(accessToken: string, expiresInSeconds: number) {
   const token: StoredToken = { accessToken, expiresAt: Date.now() + expiresInSeconds * 1000 - 30_000 }
-  sessionStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(token))
+  localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(token))
 }
 
 export function isConnected(): boolean {
@@ -82,7 +82,7 @@ export function isConnected(): boolean {
 }
 
 export function disconnect() {
-  sessionStorage.removeItem(TOKEN_STORAGE_KEY)
+  localStorage.removeItem(TOKEN_STORAGE_KEY)
 }
 
 export async function connect(): Promise<void> {
