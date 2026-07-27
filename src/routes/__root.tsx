@@ -57,14 +57,14 @@ export const Route = createRootRoute({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1.0' },
-      { title: 'Blink App' },
-      { name: 'description', content: 'An app built with Blink.' },
+      { title: 'MotoManage Pro' },
+      { name: 'description', content: 'Sistema completo de gestao para oficinas de motos: clientes, veiculos, agendamentos, ordens de servico, estoque de pecas e financeiro.' },
       { name: 'theme-color', content: '#0a0a0a' },
       { property: 'og:type', content: 'website' },
-      { property: 'og:title', content: 'Blink App' },
-      { property: 'og:description', content: 'An app built with Blink.' },
+      { property: 'og:title', content: 'MotoManage Pro' },
+      { property: 'og:description', content: 'Sistema completo de gestao para oficinas de motos.' },
       // Shared-shell SEO defaults — set these to the real brand/locale per app.
-      { property: 'og:site_name', content: 'Blink App' },
+      { property: 'og:site_name', content: 'MotoManage Pro' },
       { property: 'og:locale', content: 'en_US' },
       { name: 'twitter:card', content: 'summary_large_image' },
     ],
@@ -96,8 +96,8 @@ function RootDocument({ children }: { children: ReactNode }) {
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@graph': [
-                { '@type': 'WebSite', name: 'Blink App', url: '/' },
-                { '@type': 'Organization', name: 'Blink App', url: '/', sameAs: [] },
+                { '@type': 'WebSite', name: 'MotoManage Pro', url: '/' },
+                { '@type': 'Organization', name: 'MotoManage Pro', url: '/', sameAs: [] },
               ],
             }),
           }}

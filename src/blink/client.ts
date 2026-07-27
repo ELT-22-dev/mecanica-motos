@@ -168,7 +168,10 @@ function table<T extends { id?: string }>(name: string) {
   }
 }
 
-const BACKUP_TABLES = ['patients', 'appointments', 'transactions', 'medical_records']
+const BACKUP_TABLES = [
+  'clients', 'vehicles', 'appointments', 'parts',
+  'service_orders', 'service_order_items', 'transactions',
+]
 
 export async function exportAllData(): Promise<string> {
   const dump: Record<string, unknown[]> = {}

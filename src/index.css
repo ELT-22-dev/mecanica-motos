@@ -15,41 +15,41 @@
 /* ── Design tokens — the ONLY place the app's visual identity is defined.
    Re-theme the whole app by editing the values in :root (+ .dark). No other file. ── */
 :root {
-  /* ═══ OdontoManage Pro · Healthcare palette (Teal + Coral + Mint) ═══ */
-  --background: oklch(0.985 0.004 185);
-  --foreground: oklch(0.25 0.04 195);
+  /* ═══ MotoManage Pro · Workshop palette (Graphite + Safety Orange) ═══ */
+  --background: oklch(0.985 0.002 250);
+  --foreground: oklch(0.22 0.015 250);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.25 0.04 195);
+  --card-foreground: oklch(0.22 0.015 250);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.25 0.04 195);
-  --primary: oklch(0.52 0.14 190);         /* Deep teal */
+  --popover-foreground: oklch(0.22 0.015 250);
+  --primary: oklch(0.63 0.19 45);          /* Safety orange */
   --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.96 0.02 185);
-  --secondary-foreground: oklch(0.35 0.08 190);
-  --muted: oklch(0.955 0.005 185);
-  --muted-foreground: oklch(0.5 0.03 195);
-  --accent: oklch(0.65 0.18 20);           /* Warm coral accent */
+  --secondary: oklch(0.955 0.006 250);
+  --secondary-foreground: oklch(0.32 0.02 250);
+  --muted: oklch(0.955 0.004 250);
+  --muted-foreground: oklch(0.5 0.015 250);
+  --accent: oklch(0.5 0.12 235);           /* Steel blue accent */
   --accent-foreground: oklch(0.99 0 0);
-  --destructive: oklch(0.62 0.21 25);
+  --destructive: oklch(0.6 0.21 25);
   --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(0.9 0.01 185);
-  --input: oklch(0.9 0.01 185);
-  --ring: oklch(0.52 0.14 190);
-  --chart-1: oklch(0.52 0.14 190);
-  --chart-2: oklch(0.65 0.18 20);
-  --chart-3: oklch(0.75 0.12 80);
-  --chart-4: oklch(0.45 0.1 220);
-  --chart-5: oklch(0.55 0.12 260);
-  --sidebar: oklch(0.975 0.005 185);
-  --sidebar-foreground: oklch(0.25 0.04 195);
-  --sidebar-primary: oklch(0.52 0.14 190);
+  --border: oklch(0.9 0.006 250);
+  --input: oklch(0.9 0.006 250);
+  --ring: oklch(0.63 0.19 45);
+  --chart-1: oklch(0.63 0.19 45);
+  --chart-2: oklch(0.5 0.12 235);
+  --chart-3: oklch(0.75 0.15 85);
+  --chart-4: oklch(0.4 0.02 250);
+  --chart-5: oklch(0.55 0.16 20);
+  --sidebar: oklch(0.2 0.012 250);
+  --sidebar-foreground: oklch(0.9 0.006 250);
+  --sidebar-primary: oklch(0.63 0.19 45);
   --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.94 0.015 185);
-  --sidebar-accent-foreground: oklch(0.25 0.04 195);
-  --sidebar-border: oklch(0.9 0.01 185);
-  --sidebar-ring: oklch(0.52 0.14 190);
+  --sidebar-accent: oklch(0.28 0.015 250);
+  --sidebar-accent-foreground: oklch(0.95 0.004 250);
+  --sidebar-border: oklch(0.28 0.015 250);
+  --sidebar-ring: oklch(0.63 0.19 45);
 
-  --radius: 0.6rem;
+  --radius: 0.5rem;
   --font-sans: 'Inter', 'DM Sans', ui-sans-serif, system-ui, sans-serif;
   --font-serif: 'Lora', ui-serif, Georgia, serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
@@ -59,38 +59,38 @@
 }
 
 .dark {
-  --background: oklch(0.18 0.025 200);
-  --foreground: oklch(0.88 0.015 195);
-  --card: oklch(0.22 0.03 200);
-  --card-foreground: oklch(0.88 0.015 195);
-  --popover: oklch(0.22 0.03 200);
-  --popover-foreground: oklch(0.88 0.015 195);
-  --primary: oklch(0.6 0.14 190);
-  --primary-foreground: oklch(0.15 0.02 200);
-  --secondary: oklch(0.26 0.03 200);
-  --secondary-foreground: oklch(0.75 0.02 195);
-  --muted: oklch(0.24 0.025 200);
-  --muted-foreground: oklch(0.62 0.03 195);
-  --accent: oklch(0.58 0.16 18);
-  --accent-foreground: oklch(0.98 0 0);
+  --background: oklch(0.16 0.008 250);
+  --foreground: oklch(0.9 0.006 250);
+  --card: oklch(0.2 0.01 250);
+  --card-foreground: oklch(0.9 0.006 250);
+  --popover: oklch(0.2 0.01 250);
+  --popover-foreground: oklch(0.9 0.006 250);
+  --primary: oklch(0.68 0.19 45);
+  --primary-foreground: oklch(0.15 0.01 250);
+  --secondary: oklch(0.25 0.012 250);
+  --secondary-foreground: oklch(0.8 0.006 250);
+  --muted: oklch(0.23 0.01 250);
+  --muted-foreground: oklch(0.62 0.012 250);
+  --accent: oklch(0.62 0.13 235);
+  --accent-foreground: oklch(0.15 0.01 250);
   --destructive: oklch(0.58 0.19 22);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.32 0.03 200);
-  --input: oklch(0.32 0.03 200);
-  --ring: oklch(0.6 0.14 190);
-  --chart-1: oklch(0.6 0.14 190);
-  --chart-2: oklch(0.58 0.16 18);
-  --chart-3: oklch(0.72 0.12 80);
-  --chart-4: oklch(0.5 0.1 220);
-  --chart-5: oklch(0.6 0.12 260);
-  --sidebar: oklch(0.2 0.025 200);
-  --sidebar-foreground: oklch(0.88 0.015 195);
-  --sidebar-primary: oklch(0.6 0.14 190);
-  --sidebar-primary-foreground: oklch(0.15 0.02 200);
-  --sidebar-accent: oklch(0.27 0.03 200);
-  --sidebar-accent-foreground: oklch(0.78 0.02 195);
-  --sidebar-border: oklch(0.32 0.03 200);
-  --sidebar-ring: oklch(0.6 0.14 190);
+  --border: oklch(0.3 0.012 250);
+  --input: oklch(0.3 0.012 250);
+  --ring: oklch(0.68 0.19 45);
+  --chart-1: oklch(0.68 0.19 45);
+  --chart-2: oklch(0.62 0.13 235);
+  --chart-3: oklch(0.72 0.15 85);
+  --chart-4: oklch(0.65 0.01 250);
+  --chart-5: oklch(0.6 0.17 20);
+  --sidebar: oklch(0.13 0.008 250);
+  --sidebar-foreground: oklch(0.88 0.006 250);
+  --sidebar-primary: oklch(0.68 0.19 45);
+  --sidebar-primary-foreground: oklch(0.15 0.01 250);
+  --sidebar-accent: oklch(0.22 0.012 250);
+  --sidebar-accent-foreground: oklch(0.92 0.004 250);
+  --sidebar-border: oklch(0.24 0.012 250);
+  --sidebar-ring: oklch(0.68 0.19 45);
 }
 
 /* ── Token → utility mapping (Tailwind v4). Same file as the values above. ── */
@@ -168,4 +168,11 @@
     from { opacity: 0; transform: translateY(10px); }
     to   { opacity: 1; transform: translateY(0); }
   }
+}
+
+/* Clean print output for Ordens de Servico / orcamentos — hide app chrome,
+   let the printable card fill the page. */
+@media print {
+  aside, .md\:hidden { display: none !important; }
+  main { overflow: visible !important; }
 }

@@ -13,18 +13,17 @@ import {
   LayoutDashboard,
   Users,
   CalendarDays,
-  Stethoscope,
+  Wrench,
+  Package,
   DollarSign,
-  ClipboardList,
   Settings,
   LogOut,
   PanelLeft,
-  ChevronDown,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useClinicBranding } from '@/hooks/useClinicBranding'
+import { useWorkshopBranding } from '@/hooks/useWorkshopBranding'
 
-const SIDEBAR_KEY = 'odonto_sidebar'
+const SIDEBAR_KEY = 'moto_sidebar'
 
 interface NavItemDef {
   href: string
@@ -34,11 +33,11 @@ interface NavItemDef {
 
 const NAV_ITEMS: NavItemDef[] = [
   { href: '/', icon: <LayoutDashboard className="size-4" />, label: 'Dashboard' },
-  { href: '/pacientes', icon: <Users className="size-4" />, label: 'Pacientes' },
+  { href: '/clientes', icon: <Users className="size-4" />, label: 'Clientes' },
   { href: '/agenda', icon: <CalendarDays className="size-4" />, label: 'Agenda' },
-  { href: '/consultas', icon: <Stethoscope className="size-4" />, label: 'Consultas' },
+  { href: '/ordens-servico', icon: <Wrench className="size-4" />, label: 'Ordens de Servico' },
+  { href: '/estoque', icon: <Package className="size-4" />, label: 'Estoque' },
   { href: '/financeiro', icon: <DollarSign className="size-4" />, label: 'Financeiro' },
-  { href: '/prontuarios', icon: <ClipboardList className="size-4" />, label: 'Prontuarios' },
 ]
 
 const BOTTOM_ITEMS: NavItemDef[] = [
@@ -56,7 +55,7 @@ export function AppSidebar({ user, onNavigate }: AppSidebarProps) {
     return localStorage.getItem(SIDEBAR_KEY) === 'true'
   })
   const location = useLocation()
-  const { clinicName, logoDataUrl } = useClinicBranding()
+  const { workshopName, logoDataUrl } = useWorkshopBranding()
 
   const toggle = useCallback(() => {
     setCollapsed((v) => {
@@ -92,11 +91,11 @@ export function AppSidebar({ user, onNavigate }: AppSidebarProps) {
                 <img src={logoDataUrl} alt="" className="size-7 rounded-md object-cover shrink-0" />
               ) : (
                 <div className="flex items-center justify-center size-7 rounded-md bg-sidebar-primary text-sidebar-primary-foreground text-xs font-bold shrink-0">
-                  {clinicName.charAt(0).toUpperCase()}
+                  {workshopName.charAt(0).toUpperCase()}
                 </div>
               )}
               <span className="flex-1 font-semibold text-sm truncate text-sidebar-foreground">
-                {clinicName}
+                {workshopName}
               </span>
             </>
           )}
@@ -134,7 +133,7 @@ export function AppSidebar({ user, onNavigate }: AppSidebarProps) {
               key={item.href}
               item={item}
               collapsed={collapsed}
-              active={location.pathname === item.href}
+              active={location.pathname === item.href || (item.href !== '/' && location.pathname.startsWith(item.href))}
               onClick={onNavigate}
             />
           ))}

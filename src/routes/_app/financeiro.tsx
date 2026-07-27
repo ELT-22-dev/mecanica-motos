@@ -28,7 +28,8 @@ import {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface Transaction {
-  id: string; patient_id: string | null; patient_name: string | null
+  id: string; client_id: string | null; client_name: string | null
+  service_order_id: string | null
   type: string; category: string; description: string | null
   amount: string; payment_method: string; status: string
   installments: string; current_installment: string
@@ -97,7 +98,7 @@ const MONTH_NAMES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Se
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export const Route = createFileRoute('/_app/financeiro')({
-  head: () => ({ meta: [{ title: 'Financeiro · OdontoManage Pro' }] }),
+  head: () => ({ meta: [{ title: 'Financeiro · MotoManage Pro' }] }),
   component: FinanceiroPage,
 })
 
@@ -112,7 +113,7 @@ function FinanceiroPage() {
   const [period, setPeriod] = useState<Period>('this-month')
   const [newOpen, setNewOpen] = useState(false)
   const [form, setForm] = useState({
-    patient_name: '', type: 'income', category: 'Consulta', description: '',
+    client_name: '', type: 'income', category: 'Servico', description: '',
     amount: '', payment_method: 'dinheiro', due_date: '',
   })
 
@@ -142,7 +143,7 @@ function FinanceiroPage() {
     if (search) {
       const s = search.toLowerCase()
       list = list.filter((t) =>
-        (t.patient_name && t.patient_name.toLowerCase().includes(s)) ||
+        (t.client_name && t.client_name.toLowerCase().includes(s)) ||
         (t.description && t.description.toLowerCase().includes(s)) ||
         t.category.toLowerCase().includes(s)
       )
@@ -229,11 +230,10 @@ function FinanceiroPage() {
         ...form,
         amount: form.amount,
         status: 'paid',
-        user_id: 'user',
       } as any)
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       setNewOpen(false)
-      setForm({ patient_name: '', type: 'income', category: 'Consulta', description: '', amount: '', payment_method: 'dinheiro', due_date: '' })
+      setForm({ client_name: '', type: 'income', category: 'Servico', description: '', amount: '', payment_method: 'dinheiro', due_date: '' })
       toast.success('Transação registrada')
     } catch (err: any) { toast.error(err?.message || 'Erro') }
   }
@@ -536,7 +536,7 @@ function FinanceiroPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-medium truncate">
-                              {t.patient_name || t.description || t.category}
+                              {t.client_name || t.description || t.category}
                             </p>
                             {/* Status badge — click to cycle */}
                             <button
@@ -633,8 +633,8 @@ function FinanceiroPage() {
               <Input value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Descrição da transação" />
             </div>
             <div className="space-y-1.5">
-              <Label>Paciente (opcional)</Label>
-              <Input value={form.patient_name} onChange={(e) => setForm((f) => ({ ...f, patient_name: e.target.value }))} placeholder="Nome do paciente" />
+              <Label>Cliente (opcional)</Label>
+              <Input value={form.client_name} onChange={(e) => setForm((f) => ({ ...f, client_name: e.target.value }))} placeholder="Nome do cliente" />
             </div>
           </div>
           <DialogFooter>

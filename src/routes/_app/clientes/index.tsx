@@ -17,43 +17,43 @@ import {
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
-interface Patient {
-  id: string; name: string; cpf: string | null; phone: string | null
+interface Client {
+  id: string; name: string; cpf_cnpj: string | null; phone: string | null
   whatsapp: string | null; email: string | null; city: string | null
   status: string; created_at: string
 }
 
-export const Route = createFileRoute('/_app/pacientes/')({
+export const Route = createFileRoute('/_app/clientes/')({
   head: () => ({
     meta: [
-      { title: 'Pacientes · OdontoManage Pro' },
-      { name: 'description', content: 'Cadastro de pacientes' },
+      { title: 'Clientes · MotoManage Pro' },
+      { name: 'description', content: 'Cadastro de clientes da oficina' },
     ],
   }),
-  component: PatientsPage,
+  component: ClientsPage,
 })
 
-function PatientsPage() {
+function ClientsPage() {
   const [search, setSearch] = useState('')
   const queryClient = useQueryClient()
 
-  const { data: patients = [] } = useQuery<Patient[]>({
-    queryKey: ['patients'],
-    queryFn: () => blink.db.table<Patient>('patients').list({ orderBy: { name: 'asc' } }),
+  const { data: clients = [] } = useQuery<Client[]>({
+    queryKey: ['clients'],
+    queryFn: () => blink.db.table<Client>('clients').list({ orderBy: { name: 'asc' } }),
   })
 
-  const filtered = patients.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    (p.cpf && p.cpf.includes(search)) ||
-    (p.email && p.email.toLowerCase().includes(search.toLowerCase()))
+  const filtered = clients.filter((c) =>
+    c.name.toLowerCase().includes(search.toLowerCase()) ||
+    (c.cpf_cnpj && c.cpf_cnpj.includes(search)) ||
+    (c.email && c.email.toLowerCase().includes(search.toLowerCase()))
   )
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Excluir paciente "${name}"? Esta acao nao pode ser desfeita.`)) return
+    if (!confirm(`Excluir cliente "${name}"? Esta acao nao pode ser desfeita.`)) return
     try {
-      await blink.db.table('patients').delete(id)
-      queryClient.invalidateQueries({ queryKey: ['patients'] })
-      toast.success('Paciente excluido')
+      await blink.db.table('clients').delete(id)
+      queryClient.invalidateQueries({ queryKey: ['clients'] })
+      toast.success('Cliente excluido')
     } catch (err: any) {
       toast.error(err?.message || 'Erro ao excluir')
     }
@@ -77,15 +77,15 @@ function PatientsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Pacientes</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Clientes</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {patients.length} paciente{patients.length !== 1 ? 's' : ''} cadastrado{patients.length !== 1 ? 's' : ''}
+            {clients.length} cliente{clients.length !== 1 ? 's' : ''} cadastrado{clients.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <Link to="/pacientes/novo">
+        <Link to="/clientes/novo">
           <Button size="sm" className="gap-2">
             <Plus className="size-4" />
-            Novo Paciente
+            Novo Cliente
           </Button>
         </Link>
       </div>
@@ -94,52 +94,52 @@ function PatientsPage() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
         <Input
-          placeholder="Buscar por nome, CPF ou email..."
+          placeholder="Buscar por nome, CPF/CNPJ ou email..."
           className="pl-9 h-10"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
 
-      {/* Patient list */}
+      {/* Client list */}
       {filtered.length === 0 ? (
         <Card className="border-border/60 border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Users className="size-10 text-muted-foreground/30 mb-3" />
             <p className="text-sm font-medium text-muted-foreground">
-              {search ? 'Nenhum paciente encontrado' : 'Nenhum paciente cadastrado'}
+              {search ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {search ? 'Tente outro termo de busca' : 'Clique em "Novo Paciente" para comecar'}
+              {search ? 'Tente outro termo de busca' : 'Clique em "Novo Cliente" para comecar'}
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-2">
-          {filtered.map((p) => (
+          {filtered.map((c) => (
             <Link
-              key={p.id}
-              to="/pacientes/$id"
-              params={{ id: p.id }}
+              key={c.id}
+              to="/clientes/$id"
+              params={{ id: c.id }}
               className="block"
             >
               <Card className="border-border/60 hover:border-border hover:shadow-sm transition-all cursor-pointer group">
                 <CardContent className="p-4 flex items-center gap-4">
                   <div className="flex items-center justify-center size-10 rounded-full bg-primary/10 text-primary shrink-0">
                     <span className="text-sm font-semibold">
-                      {p.name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
+                      {c.name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-foreground truncate">{p.name}</p>
-                      {statusBadge(p.status)}
+                      <p className="text-sm font-semibold text-foreground truncate">{c.name}</p>
+                      {statusBadge(c.status)}
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-0.5 text-xs text-muted-foreground">
-                      {p.cpf && <span>CPF: {p.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}</span>}
-                      {p.phone && <span className="flex items-center gap-1"><Phone className="size-3" /> {p.phone}</span>}
-                      {p.email && <span className="flex items-center gap-1"><Mail className="size-3" /> {p.email}</span>}
-                      {p.city && <span className="flex items-center gap-1"><MapPin className="size-3" /> {p.city}</span>}
+                      {c.cpf_cnpj && <span>{c.cpf_cnpj}</span>}
+                      {c.phone && <span className="flex items-center gap-1"><Phone className="size-3" /> {c.phone}</span>}
+                      {c.email && <span className="flex items-center gap-1"><Mail className="size-3" /> {c.email}</span>}
+                      {c.city && <span className="flex items-center gap-1"><MapPin className="size-3" /> {c.city}</span>}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
@@ -151,13 +151,13 @@ function PatientsPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem asChild>
-                          <Link to="/pacientes/$id" params={{ id: p.id }}>
+                          <Link to="/clientes/$id" params={{ id: c.id }}>
                             <Edit className="size-4 mr-2" /> Editar
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"
-                          onClick={() => handleDelete(p.id, p.name)}
+                          onClick={(e) => { e.preventDefault(); handleDelete(c.id, c.name) }}
                         >
                           <Trash2 className="size-4 mr-2" /> Excluir
                         </DropdownMenuItem>

@@ -1,23 +1,23 @@
 import { useQuery } from '@tanstack/react-query'
 import { blink } from '@/blink/client'
 
-interface ClinicSettings {
+interface WorkshopSettings {
   id?: string
-  clinic_name: string | null
+  workshop_name: string | null
   logo_data_url: string | null
 }
 
-export function useClinicBranding() {
+export function useWorkshopBranding() {
   const { data } = useQuery({
-    queryKey: ['clinic-settings'],
+    queryKey: ['workshop-settings'],
     queryFn: async () => {
-      const rows = await blink.db.table<ClinicSettings>('clinic_settings').list()
+      const rows = await blink.db.table<WorkshopSettings>('workshop_settings').list()
       return rows[0] ?? null
     },
   })
 
   return {
-    clinicName: data?.clinic_name?.trim() || 'OdontoManage Pro',
+    workshopName: data?.workshop_name?.trim() || 'MotoManage Pro',
     logoDataUrl: data?.logo_data_url || null,
   }
 }

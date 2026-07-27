@@ -14,23 +14,40 @@ export function openWhatsApp(rawPhone: string, message: string) {
 }
 
 export function buildAppointmentReminderMessage(params: {
-  patientName: string
+  clientName: string
   date: string
   time: string
-  dentistName?: string | null
-  type?: string | null
+  mechanicName?: string | null
+  serviceType?: string | null
+  vehicleLabel?: string | null
 }): string {
-  const { patientName, date, time, dentistName, type } = params
+  const { clientName, date, time, mechanicName, serviceType, vehicleLabel } = params
   const formattedDate = new Date(date + 'T00:00').toLocaleDateString('pt-BR', {
     weekday: 'long', day: '2-digit', month: 'long',
   })
-  const typeLabel = type && type.trim().toLowerCase() !== 'consulta' ? ` de ${type}` : ''
-  let msg = `Ola ${patientName}! Passando para lembrar da sua consulta${typeLabel} agendada para ${formattedDate} as ${time}`
-  if (dentistName) msg += ` com Dr(a). ${dentistName}`
+  const typeLabel = serviceType && serviceType.trim().toLowerCase() !== 'revisao' ? ` de ${serviceType}` : ''
+  const vehiclePart = vehicleLabel ? ` da sua moto (${vehicleLabel})` : ''
+  let msg = `Ola ${clientName}! Passando para lembrar do servico${typeLabel}${vehiclePart} agendado para ${formattedDate} as ${time}`
+  if (mechanicName) msg += ` com ${mechanicName}`
   msg += '. Qualquer duvida ou imprevisto, e so responder por aqui. Ate breve!'
   return msg
 }
 
-export function buildGreetingMessage(patientName: string): string {
-  return `Ola ${patientName}! Aqui e da clinica. Tudo bem?`
+export function buildServiceOrderReadyMessage(params: {
+  clientName: string
+  vehicleLabel?: string | null
+  total?: number | null
+}): string {
+  const { clientName, vehicleLabel, total } = params
+  const vehiclePart = vehicleLabel ? ` (${vehicleLabel})` : ''
+  let msg = `Ola ${clientName}! Sua moto${vehiclePart} ja esta pronta para retirada.`
+  if (total != null) {
+    msg += ` Valor total do servico: ${total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}.`
+  }
+  msg += ' Qualquer duvida, e so responder por aqui. Obrigado pela preferencia!'
+  return msg
+}
+
+export function buildGreetingMessage(clientName: string): string {
+  return `Ola ${clientName}! Aqui e da oficina. Tudo bem?`
 }

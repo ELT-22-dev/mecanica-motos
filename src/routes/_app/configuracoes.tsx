@@ -1,15 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
-import { User, Sun, Moon, Monitor, Download, Upload, Trash2, FileSpreadsheet, CalendarClock, Building2, ImagePlus, X } from 'lucide-react'
+import { User, Sun, Moon, Monitor, Download, Upload, Trash2, FileSpreadsheet, Building2, ImagePlus, X } from 'lucide-react'
 import { blink, exportAllData, importAllData, clearAllData } from '@/blink/client'
 import {
-  parseCsv, detectColumnMapping, mapRowToPatient,
-  PATIENT_FIELD_LABELS, type ParsedCsv, type PatientField,
-} from '@/lib/patientImport'
+  parseCsv, detectColumnMapping, mapRowToClient,
+  CLIENT_FIELD_LABELS, type ParsedCsv, type ClientField,
+} from '@/lib/clientImport'
 import { useAuth } from '@/hooks/useAuth'
-import { useGoogleCalendar } from '@/hooks/useGoogleCalendar'
-import { createEvent as createGoogleEvent } from '@/lib/googleCalendar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,7 +19,7 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
 export const Route = createFileRoute('/_app/configuracoes')({
-  head: () => ({ meta: [{ title: 'Configuracoes · OdontoManage Pro' }] }),
+  head: () => ({ meta: [{ title: 'Configuracoes · MotoManage Pro' }] }),
   component: SettingsPage,
 })
 
@@ -49,32 +47,29 @@ function SettingsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const csvInputRef = useRef<HTMLInputElement>(null)
   const logoInputRef = useRef<HTMLInputElement>(null)
-  const googleCalendar = useGoogleCalendar()
-  const [connectingGoogle, setConnectingGoogle] = useState(false)
-  const [syncingAppointments, setSyncingAppointments] = useState(false)
 
   const [name, setName] = useState(user?.displayName || '')
   const [email, setEmail] = useState(user?.email || '')
   const [theme, setTheme] = useState<ThemeMode>(() => getStoredTheme())
   const [csvPreview, setCsvPreview] = useState<ParsedCsv | null>(null)
-  const [csvMapping, setCsvMapping] = useState<Partial<Record<PatientField, string>>>({})
+  const [csvMapping, setCsvMapping] = useState<Partial<Record<ClientField, string>>>({})
   const [importingCsv, setImportingCsv] = useState(false)
 
-  const { data: clinicSettings } = useQuery({
-    queryKey: ['clinic-settings'],
+  const { data: workshopSettings } = useQuery({
+    queryKey: ['workshop-settings'],
     queryFn: async () => {
-      const rows = await blink.db.table<{ id: string; clinic_name: string | null; logo_data_url: string | null }>('clinic_settings').list()
+      const rows = await blink.db.table<{ id: string; workshop_name: string | null; logo_data_url: string | null }>('workshop_settings').list()
       return rows[0] ?? null
     },
   })
-  const [clinicName, setClinicName] = useState('')
+  const [workshopName, setWorkshopName] = useState('')
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
-  const [savingClinic, setSavingClinic] = useState(false)
+  const [savingWorkshop, setSavingWorkshop] = useState(false)
 
   useEffect(() => {
-    setClinicName(clinicSettings?.clinic_name || '')
-    setLogoPreview(clinicSettings?.logo_data_url || null)
-  }, [clinicSettings])
+    setWorkshopName(workshopSettings?.workshop_name || '')
+    setLogoPreview(workshopSettings?.logo_data_url || null)
+  }, [workshopSettings])
 
   useEffect(() => {
     if (!user) return
@@ -107,26 +102,26 @@ function SettingsPage() {
     reader.readAsDataURL(file)
   }
 
-  const saveClinicBranding = async () => {
-    setSavingClinic(true)
+  const saveWorkshopBranding = async () => {
+    setSavingWorkshop(true)
     try {
-      if (clinicSettings) {
-        await blink.db.table('clinic_settings').update(clinicSettings.id, {
-          clinic_name: clinicName,
+      if (workshopSettings) {
+        await blink.db.table('workshop_settings').update(workshopSettings.id, {
+          workshop_name: workshopName,
           logo_data_url: logoPreview,
         } as any)
       } else {
-        await blink.db.table('clinic_settings').create({
-          clinic_name: clinicName,
+        await blink.db.table('workshop_settings').create({
+          workshop_name: workshopName,
           logo_data_url: logoPreview,
         } as any)
       }
-      queryClient.invalidateQueries({ queryKey: ['clinic-settings'] })
-      toast.success('Dados da clinica atualizados')
+      queryClient.invalidateQueries({ queryKey: ['workshop-settings'] })
+      toast.success('Dados da oficina atualizados')
     } catch (err: any) {
-      toast.error(err?.message || 'Erro ao salvar dados da clinica')
+      toast.error(err?.message || 'Erro ao salvar dados da oficina')
     } finally {
-      setSavingClinic(false)
+      setSavingWorkshop(false)
     }
   }
 
@@ -142,7 +137,7 @@ function SettingsPage() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `odontomanage-backup-${new Date().toISOString().slice(0, 10)}.json`
+      a.download = `motomanage-backup-${new Date().toISOString().slice(0, 10)}.json`
       a.click()
       URL.revokeObjectURL(url)
       toast.success('Backup exportado')
@@ -176,7 +171,7 @@ function SettingsPage() {
       }
       const mapping = detectColumnMapping(parsed.headers)
       if (!mapping.name) {
-        toast.error('Nao encontrei uma coluna de nome do paciente no arquivo')
+        toast.error('Nao encontrei uma coluna de nome do cliente no arquivo')
         return
       }
       setCsvMapping(mapping)
@@ -191,78 +186,23 @@ function SettingsPage() {
     setImportingCsv(true)
     try {
       const rows = csvPreview.rows
-        .map((row) => mapRowToPatient(row, csvMapping))
-        .filter((patient) => !!patient.name)
-        .map((patient) => ({ ...patient, status: 'active' }))
+        .map((row) => mapRowToClient(row, csvMapping))
+        .filter((client) => !!client.name)
+        .map((client) => ({ ...client, status: 'active' }))
       const skipped = csvPreview.rows.length - rows.length
-      const inserted = await blink.db.table('patients').createMany(rows as any)
-      queryClient.invalidateQueries({ queryKey: ['patients'] })
-      toast.success(`${inserted.length} paciente${inserted.length !== 1 ? 's' : ''} importado${inserted.length !== 1 ? 's' : ''}${skipped ? `, ${skipped} sem nome (ignorado${skipped !== 1 ? 's' : ''})` : ''}`)
+      const inserted = await blink.db.table('clients').createMany(rows as any)
+      queryClient.invalidateQueries({ queryKey: ['clients'] })
+      toast.success(`${inserted.length} cliente${inserted.length !== 1 ? 's' : ''} importado${inserted.length !== 1 ? 's' : ''}${skipped ? `, ${skipped} sem nome (ignorado${skipped !== 1 ? 's' : ''})` : ''}`)
       setCsvPreview(null)
     } catch (err: any) {
-      toast.error(err?.message || 'Erro ao importar pacientes')
+      toast.error(err?.message || 'Erro ao importar clientes')
     } finally {
       setImportingCsv(false)
     }
   }
 
-  const handleGoogleConnect = async () => {
-    setConnectingGoogle(true)
-    try {
-      await googleCalendar.connect()
-      toast.success('Google Calendar conectado! Novas consultas serao sincronizadas.')
-    } catch (err: any) {
-      toast.error(err?.message || 'Erro ao conectar com o Google')
-    } finally {
-      setConnectingGoogle(false)
-    }
-  }
-
-  const handleSyncPendingAppointments = async () => {
-    setSyncingAppointments(true)
-    try {
-      const today = new Date().toISOString().slice(0, 10)
-      const appointments = await blink.db.table<{
-        id: string; patient_name: string; type: string; date: string; time: string
-        dentist_name: string | null; room: string | null; notes: string | null
-        status: string; google_event_id: string | null
-      }>('appointments').list()
-      const pending = appointments.filter(
-        (a) => !a.google_event_id && a.date >= today && (a.status === 'scheduled' || a.status === 'confirmed')
-      )
-      if (pending.length === 0) {
-        toast.success('Nenhuma consulta pendente para sincronizar')
-        return
-      }
-      let success = 0
-      for (const appt of pending) {
-        try {
-          const eventId = await createGoogleEvent({
-            patientName: appt.patient_name,
-            type: appt.type,
-            date: appt.date,
-            time: appt.time,
-            dentistName: appt.dentist_name,
-            room: appt.room,
-            notes: appt.notes,
-          })
-          await blink.db.table('appointments').update(appt.id, { google_event_id: eventId } as any)
-          success++
-        } catch {
-          // keep going with the rest
-        }
-      }
-      queryClient.invalidateQueries({ queryKey: ['appointments'] })
-      toast.success(`${success} de ${pending.length} consulta${pending.length !== 1 ? 's' : ''} sincronizada${success !== 1 ? 's' : ''}`)
-    } catch (err: any) {
-      toast.error(err?.message || 'Erro ao sincronizar consultas')
-    } finally {
-      setSyncingAppointments(false)
-    }
-  }
-
   const handleClearData = async () => {
-    if (!confirm('Isso vai apagar TODOS os pacientes, consultas, transacoes e prontuarios cadastrados. Esta acao nao pode ser desfeita. Continuar?')) return
+    if (!confirm('Isso vai apagar TODOS os clientes, veiculos, agendamentos, pecas, ordens de servico e transacoes cadastrados. Esta acao nao pode ser desfeita. Continuar?')) return
     try {
       await clearAllData()
       queryClient.invalidateQueries()
@@ -306,11 +246,11 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Dados da clinica */}
+      {/* Dados da oficina */}
       <Card className="border-border/60">
         <CardHeader className="pb-4">
           <CardTitle className="text-base flex items-center gap-2">
-            <Building2 className="size-4" /> Dados da clinica
+            <Building2 className="size-4" /> Dados da oficina
           </CardTitle>
           <CardDescription>Nome e logo aparecem na barra lateral e na tela de login.</CardDescription>
         </CardHeader>
@@ -338,12 +278,12 @@ function SettingsPage() {
               </button>
             )}
             <div className="flex-1 space-y-1.5">
-              <Label htmlFor="clinic-name">Nome da clinica</Label>
+              <Label htmlFor="workshop-name">Nome da oficina</Label>
               <Input
-                id="clinic-name"
-                value={clinicName}
-                onChange={(e) => setClinicName(e.target.value)}
-                placeholder="Clinica Odontologica Sorriso"
+                id="workshop-name"
+                value={workshopName}
+                onChange={(e) => setWorkshopName(e.target.value)}
+                placeholder="Oficina Moto Veloz"
               />
             </div>
             <input
@@ -362,8 +302,8 @@ function SettingsPage() {
             <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => logoInputRef.current?.click()}>
               <ImagePlus className="size-4" /> {logoPreview ? 'Trocar logo' : 'Escolher logo'}
             </Button>
-            <Button type="button" size="sm" onClick={saveClinicBranding} disabled={savingClinic}>
-              {savingClinic ? 'Salvando...' : 'Salvar'}
+            <Button type="button" size="sm" onClick={saveWorkshopBranding} disabled={savingWorkshop}>
+              {savingWorkshop ? 'Salvando...' : 'Salvar'}
             </Button>
           </div>
         </CardContent>
@@ -401,50 +341,12 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Integracoes */}
-      <Card className="border-border/60">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base flex items-center gap-2">
-            <CalendarClock className="size-4" /> Integracoes
-          </CardTitle>
-          <CardDescription>
-            Conecte seu Google Calendar para que novas consultas apareçam automaticamente na sua agenda do Google.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 px-4 py-3">
-            <div>
-              <p className="text-sm font-medium">Google Calendar</p>
-              <p className="text-xs text-muted-foreground">
-                {googleCalendar.connected
-                  ? 'Conectado — a conexao dura cerca de 1 hora, reconecte quando expirar.'
-                  : 'Nao conectado'}
-              </p>
-            </div>
-            {googleCalendar.connected ? (
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={handleSyncPendingAppointments} disabled={syncingAppointments}>
-                  {syncingAppointments ? 'Sincronizando...' : 'Sincronizar pendentes'}
-                </Button>
-                <Button type="button" variant="outline" size="sm" onClick={googleCalendar.disconnect}>
-                  Desconectar
-                </Button>
-              </div>
-            ) : (
-              <Button type="button" variant="outline" size="sm" onClick={handleGoogleConnect} disabled={connectingGoogle}>
-                {connectingGoogle ? 'Conectando...' : 'Conectar'}
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Dados do sistema */}
       <Card className="border-border/60">
         <CardHeader className="pb-4">
           <CardTitle className="text-base">Dados do sistema</CardTitle>
           <CardDescription>
-            Os dados ficam salvos no banco de dados da clinica. Use o backup para ter uma copia extra, ou importe uma planilha para trazer pacientes de outro sistema.
+            Os dados ficam salvos no banco de dados da oficina. Use o backup para ter uma copia extra, ou importe uma planilha para trazer clientes de outro sistema.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -478,7 +380,7 @@ function SettingsPage() {
           </div>
 
           <div className="pt-3 border-t border-border/60">
-            <p className="text-xs font-medium text-muted-foreground mb-2">Migrar pacientes de outro sistema (.csv)</p>
+            <p className="text-xs font-medium text-muted-foreground mb-2">Migrar clientes de outro sistema (.csv)</p>
             <div className="flex flex-wrap gap-3">
               <Button
                 type="button"
@@ -487,7 +389,7 @@ function SettingsPage() {
                 className="gap-2"
                 onClick={() => csvInputRef.current?.click()}
               >
-                <FileSpreadsheet className="size-4" /> Importar pacientes (CSV)
+                <FileSpreadsheet className="size-4" /> Importar clientes (CSV)
               </Button>
               <input
                 ref={csvInputRef}
@@ -518,7 +420,7 @@ function SettingsPage() {
       <Dialog open={!!csvPreview} onOpenChange={(open) => !open && setCsvPreview(null)}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Confirmar importacao de pacientes</DialogTitle>
+            <DialogTitle>Confirmar importacao de clientes</DialogTitle>
             <DialogDescription>
               {csvPreview ? `${csvPreview.rows.length} linha${csvPreview.rows.length !== 1 ? 's' : ''} encontrada${csvPreview.rows.length !== 1 ? 's' : ''} no arquivo.` : ''}
             </DialogDescription>
@@ -528,9 +430,9 @@ function SettingsPage() {
               <div>
                 <p className="text-xs font-medium text-muted-foreground mb-2">Colunas detectadas</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {(Object.keys(csvMapping) as PatientField[]).map((field) => (
+                  {(Object.keys(csvMapping) as ClientField[]).map((field) => (
                     <span key={field} className="text-xs bg-muted rounded-full px-2.5 py-1">
-                      {PATIENT_FIELD_LABELS[field]} <span className="text-muted-foreground">← {csvMapping[field]}</span>
+                      {CLIENT_FIELD_LABELS[field]} <span className="text-muted-foreground">← {csvMapping[field]}</span>
                     </span>
                   ))}
                 </div>
@@ -539,12 +441,12 @@ function SettingsPage() {
                 <p className="text-xs font-medium text-muted-foreground mb-2">Previa (primeiras linhas)</p>
                 <div className="rounded-md border border-border/60 divide-y divide-border max-h-40 overflow-y-auto">
                   {csvPreview.rows.slice(0, 5).map((row, i) => {
-                    const patient = mapRowToPatient(row, csvMapping)
+                    const client = mapRowToClient(row, csvMapping)
                     return (
                       <div key={i} className="px-3 py-2 text-sm">
-                        <span className="font-medium">{patient.name || '(sem nome)'}</span>
-                        {patient.phone && <span className="text-muted-foreground"> · {patient.phone}</span>}
-                        {patient.email && <span className="text-muted-foreground"> · {patient.email}</span>}
+                        <span className="font-medium">{client.name || '(sem nome)'}</span>
+                        {client.phone && <span className="text-muted-foreground"> · {client.phone}</span>}
+                        {client.email && <span className="text-muted-foreground"> · {client.email}</span>}
                       </div>
                     )
                   })}
@@ -557,7 +459,7 @@ function SettingsPage() {
               Cancelar
             </Button>
             <Button type="button" onClick={confirmCsvImport} disabled={importingCsv}>
-              {importingCsv ? 'Importando...' : `Importar ${csvPreview?.rows.length ?? 0} paciente${csvPreview?.rows.length !== 1 ? 's' : ''}`}
+              {importingCsv ? 'Importando...' : `Importar ${csvPreview?.rows.length ?? 0} cliente${csvPreview?.rows.length !== 1 ? 's' : ''}`}
             </Button>
           </DialogFooter>
         </DialogContent>

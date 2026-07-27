@@ -3,12 +3,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { blink } from '@/blink/client'
 import { useState, useMemo } from 'react'
 import {
-  CalendarDays, Clock, Plus, Search, ChevronLeft, ChevronRight,
-  MoreHorizontal, Edit, Trash2, CheckCircle, XCircle, UserX, Play, MessageCircle
+  CalendarDays, Plus, ChevronLeft, ChevronRight,
+  MoreHorizontal, Trash2, CheckCircle, XCircle, UserX, Play, MessageCircle
 } from 'lucide-react'
 import { openWhatsApp, buildAppointmentReminderMessage } from '@/lib/whatsapp'
-import { createEvent as createGoogleEvent, deleteEvent as deleteGoogleEvent } from '@/lib/googleCalendar'
-import { useGoogleCalendar } from '@/hooks/useGoogleCalendar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -24,29 +22,33 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
 interface Appointment {
-  id: string; patient_id: string; patient_name: string; dentist_name: string | null
-  date: string; time: string; type: string; room: string | null
-  notes: string | null; status: string; google_event_id: string | null
+  id: string; client_id: string | null; client_name: string; vehicle_id: string | null
+  vehicle_label: string | null; mechanic_name: string | null
+  date: string; time: string; service_type: string
+  notes: string | null; status: string
 }
 
-interface Patient {
+interface Client {
   id: string; name: string; phone: string | null; whatsapp: string | null
 }
 
+interface Vehicle {
+  id: string; client_id: string; brand: string; model: string; plate: string | null
+}
+
 export const Route = createFileRoute('/_app/agenda')({
-  head: () => ({ meta: [{ title: 'Agenda · OdontoManage Pro' }] }),
+  head: () => ({ meta: [{ title: 'Agenda · MotoManage Pro' }] }),
   component: AgendaPage,
 })
 
 function AgendaPage() {
   const queryClient = useQueryClient()
-  const googleCalendar = useGoogleCalendar()
   const today = new Date().toISOString().slice(0, 10)
   const [selectedDate, setSelectedDate] = useState(today)
   const [newApptOpen, setNewApptOpen] = useState(false)
   const [apptForm, setApptForm] = useState({
-    patient_id: '', patient_name: '', dentist_name: '', time: '',
-    type: 'Consulta', room: '', notes: '',
+    client_id: '', client_name: '', vehicle_id: '', mechanic_name: '', time: '',
+    service_type: 'Revisao', notes: '',
   })
 
   const { data: appointments = [] } = useQuery<Appointment[]>({
@@ -54,26 +56,34 @@ function AgendaPage() {
     queryFn: () => blink.db.table<Appointment>('appointments').list(),
   })
 
-  const { data: patients = [] } = useQuery<Patient[]>({
-    queryKey: ['patients'],
-    queryFn: () => blink.db.table<Patient>('patients').list({ orderBy: { name: 'asc' } }),
+  const { data: clients = [] } = useQuery<Client[]>({
+    queryKey: ['clients'],
+    queryFn: () => blink.db.table<Client>('clients').list({ orderBy: { name: 'asc' } }),
   })
+
+  const { data: vehicles = [] } = useQuery<Vehicle[]>({
+    queryKey: ['vehicles'],
+    queryFn: () => blink.db.table<Vehicle>('vehicles').list(),
+  })
+
+  const formVehicles = vehicles.filter((v) => v.client_id === apptForm.client_id)
 
   const dayAppts = appointments.filter((a) => a.date === selectedDate)
 
   const sendReminder = (a: Appointment) => {
-    const patient = patients.find((p) => p.id === a.patient_id)
-    const contact = patient?.whatsapp || patient?.phone
+    const client = clients.find((c) => c.id === a.client_id)
+    const contact = client?.whatsapp || client?.phone
     if (!contact) {
-      toast.error('Este paciente nao tem telefone ou WhatsApp cadastrado')
+      toast.error('Este cliente nao tem telefone ou WhatsApp cadastrado')
       return
     }
     const message = buildAppointmentReminderMessage({
-      patientName: a.patient_name,
+      clientName: a.client_name,
       date: a.date,
       time: a.time,
-      dentistName: a.dentist_name,
-      type: a.type,
+      mechanicName: a.mechanic_name,
+      serviceType: a.service_type,
+      vehicleLabel: a.vehicle_label,
     })
     try {
       openWhatsApp(contact, message)
@@ -105,69 +115,51 @@ function AgendaPage() {
       await blink.db.table('appointments').update(id, { status } as any)
       queryClient.invalidateQueries({ queryKey: ['appointments'] })
       toast.success('Status atualizado')
-      if (status === 'cancelled' || status === 'no_show') {
-        const appt = appointments.find((a) => a.id === id)
-        if (appt?.google_event_id) deleteGoogleEvent(appt.google_event_id)
-      }
     } catch (err: any) { toast.error(err?.message || 'Erro') }
   }
 
   const deleteAppt = async (id: string) => {
-    if (!confirm('Excluir esta consulta?')) return
+    if (!confirm('Excluir este agendamento?')) return
     try {
-      const appt = appointments.find((a) => a.id === id)
       await blink.db.table('appointments').delete(id)
       queryClient.invalidateQueries({ queryKey: ['appointments'] })
-      toast.success('Consulta removida')
-      if (appt?.google_event_id) deleteGoogleEvent(appt.google_event_id)
+      toast.success('Agendamento removido')
     } catch (err: any) { toast.error(err?.message || 'Erro') }
   }
 
   const handleNewAppt = async () => {
-    if (!apptForm.patient_id || !apptForm.time) {
-      toast.error('Paciente e horario sao obrigatorios')
+    if (!apptForm.client_id || !apptForm.time) {
+      toast.error('Cliente e horario sao obrigatorios')
       return
     }
     try {
-      const created = await blink.db.table<Appointment>('appointments').create({
-        ...apptForm,
+      const vehicle = vehicles.find((v) => v.id === apptForm.vehicle_id)
+      await blink.db.table<Appointment>('appointments').create({
+        client_id: apptForm.client_id,
+        client_name: apptForm.client_name,
+        vehicle_id: apptForm.vehicle_id || null,
+        vehicle_label: vehicle ? `${vehicle.brand} ${vehicle.model}${vehicle.plate ? ` (${vehicle.plate})` : ''}` : null,
+        mechanic_name: apptForm.mechanic_name,
+        time: apptForm.time,
+        service_type: apptForm.service_type,
+        notes: apptForm.notes,
         date: selectedDate,
         status: 'scheduled',
-        user_id: 'user',
       } as any)
       queryClient.invalidateQueries({ queryKey: ['appointments'] })
       setNewApptOpen(false)
-      setApptForm({ patient_id: '', patient_name: '', dentist_name: '', time: '', type: 'Consulta', room: '', notes: '' })
-      toast.success('Consulta agendada!')
-
-      if (googleCalendar.connected) {
-        try {
-          const eventId = await createGoogleEvent({
-            patientName: created.patient_name,
-            type: created.type,
-            date: created.date,
-            time: created.time,
-            dentistName: created.dentist_name,
-            room: created.room,
-            notes: created.notes,
-          })
-          await blink.db.table('appointments').update(created.id, { google_event_id: eventId } as any)
-          queryClient.invalidateQueries({ queryKey: ['appointments'] })
-          toast.success('Sincronizado com o Google Calendar')
-        } catch (err: any) {
-          toast.error(err?.message || 'Consulta salva, mas nao sincronizou com o Google Calendar')
-        }
-      }
+      setApptForm({ client_id: '', client_name: '', vehicle_id: '', mechanic_name: '', time: '', service_type: 'Revisao', notes: '' })
+      toast.success('Agendamento criado!')
     } catch (err: any) { toast.error(err?.message || 'Erro') }
   }
 
   const statusBadge = (status: string) => {
     const map: Record<string, { label: string; cls: string }> = {
-      scheduled: { label: 'Agendada', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
-      confirmed: { label: 'Confirmada', cls: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' },
+      scheduled: { label: 'Agendado', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
+      confirmed: { label: 'Confirmado', cls: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' },
       in_progress: { label: 'Em atend.', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
-      completed: { label: 'Finalizada', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
-      cancelled: { label: 'Cancelada', cls: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
+      completed: { label: 'Finalizado', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
+      cancelled: { label: 'Cancelado', cls: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
       no_show: { label: 'Faltou', cls: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
     }
     const s = map[status] || { label: status, cls: '' }
@@ -184,7 +176,7 @@ function AgendaPage() {
         </div>
         <Button size="sm" className="gap-2" onClick={() => setNewApptOpen(true)}>
           <Plus className="size-4" />
-          Nova Consulta
+          Novo Agendamento
         </Button>
       </div>
 
@@ -224,7 +216,7 @@ function AgendaPage() {
                   <span className="text-lg font-bold">{d.getDate()}</span>
                   {count > 0 && (
                     <span className={cn('text-[10px] mt-0.5', isSel ? 'text-primary-foreground/80' : 'text-muted-foreground')}>
-                      {count} consulta{count !== 1 ? 's' : ''}
+                      {count} agend.
                     </span>
                   )}
                 </button>
@@ -245,7 +237,7 @@ function AgendaPage() {
           {dayAppts.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground text-sm">
               <CalendarDays className="size-10 mx-auto mb-2 opacity-30" />
-              Nenhuma consulta neste dia
+              Nenhum agendamento neste dia
             </div>
           ) : (
             <div className="divide-y divide-border">
@@ -253,9 +245,16 @@ function AgendaPage() {
                 <div key={a.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors group">
                   <span className="text-sm font-mono text-primary font-medium w-12 shrink-0">{a.time}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{a.patient_name}</p>
+                    <p className="text-sm font-medium truncate">
+                      {a.client_id ? (
+                        <Link to="/clientes/$id" params={{ id: a.client_id }} className="hover:underline hover:text-primary">
+                          {a.client_name}
+                        </Link>
+                      ) : a.client_name}
+                      {a.vehicle_label ? ` · ${a.vehicle_label}` : ''}
+                    </p>
                     <p className="text-xs text-muted-foreground">
-                      {a.type}{a.dentist_name ? ` · Dr(a). ${a.dentist_name}` : ''}{a.room ? ` · Sala ${a.room}` : ''}
+                      {a.service_type}{a.mechanic_name ? ` · ${a.mechanic_name}` : ''}
                     </p>
                   </div>
                   {statusBadge(a.status)}
@@ -300,29 +299,40 @@ function AgendaPage() {
       <Dialog open={newApptOpen} onOpenChange={setNewApptOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Nova Consulta</DialogTitle>
+            <DialogTitle>Novo Agendamento</DialogTitle>
           </DialogHeader>
-          {!googleCalendar.connected && (
-            <p className="text-xs text-muted-foreground bg-muted rounded-md px-3 py-2">
-              Google Calendar nao conectado — esta consulta ficara so no OdontoManage. Conecte em Configuracoes para sincronizar.
-            </p>
-          )}
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Paciente *</Label>
+              <Label>Cliente *</Label>
               <select
                 className="file:text-foreground dark:bg-input/30 border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm"
-                value={apptForm.patient_id}
+                value={apptForm.client_id}
                 onChange={(e) => {
-                  const patient = patients.find((p) => p.id === e.target.value)
-                  setApptForm((f) => ({ ...f, patient_id: e.target.value, patient_name: patient?.name || '' }))
+                  const client = clients.find((c) => c.id === e.target.value)
+                  setApptForm((f) => ({ ...f, client_id: e.target.value, client_name: client?.name || '', vehicle_id: '' }))
                 }}
               >
                 <option value="">
-                  {patients.length === 0 ? 'Nenhum paciente cadastrado' : 'Selecione um paciente'}
+                  {clients.length === 0 ? 'Nenhum cliente cadastrado' : 'Selecione um cliente'}
                 </option>
-                {patients.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Veiculo</Label>
+              <select
+                className="file:text-foreground dark:bg-input/30 border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm"
+                value={apptForm.vehicle_id}
+                disabled={!apptForm.client_id}
+                onChange={(e) => setApptForm((f) => ({ ...f, vehicle_id: e.target.value }))}
+              >
+                <option value="">
+                  {!apptForm.client_id ? 'Selecione um cliente primeiro' : formVehicles.length === 0 ? 'Sem veiculos cadastrados' : 'Selecione um veiculo'}
+                </option>
+                {formVehicles.map((v) => (
+                  <option key={v.id} value={v.id}>{v.brand} {v.model}{v.plate ? ` (${v.plate})` : ''}</option>
                 ))}
               </select>
             </div>
@@ -332,23 +342,17 @@ function AgendaPage() {
                 <Input type="time" value={apptForm.time} onChange={(e) => setApptForm((f) => ({ ...f, time: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label>Tipo</Label>
-                <Input value={apptForm.type} onChange={(e) => setApptForm((f) => ({ ...f, type: e.target.value }))} />
+                <Label>Tipo de servico</Label>
+                <Input value={apptForm.service_type} onChange={(e) => setApptForm((f) => ({ ...f, service_type: e.target.value }))} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Dentista</Label>
-                <Input
-                  placeholder="Nome do dentista"
-                  value={apptForm.dentist_name}
-                  onChange={(e) => setApptForm((f) => ({ ...f, dentist_name: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Sala</Label>
-                <Input value={apptForm.room} onChange={(e) => setApptForm((f) => ({ ...f, room: e.target.value }))} />
-              </div>
+            <div className="space-y-1.5">
+              <Label>Mecanico</Label>
+              <Input
+                placeholder="Nome do mecanico"
+                value={apptForm.mechanic_name}
+                onChange={(e) => setApptForm((f) => ({ ...f, mechanic_name: e.target.value }))}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Observacoes</Label>
