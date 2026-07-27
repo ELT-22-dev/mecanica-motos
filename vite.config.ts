@@ -74,7 +74,21 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react/jsx-runtime'],
+    // Pre-bundle every real runtime dependency up front. Anything missing here
+    // gets discovered lazily by Vite the first time a route imports it — which
+    // triggers a re-optimize + full page reload mid-session (feels like the app
+    // "freezes" when you click into Financeiro/Relatorios for the first time,
+    // since recharts is large). Listing them all avoids that surprise reload.
+    include: [
+      'react', 'react-dom', 'react/jsx-runtime',
+      '@tanstack/react-query', '@tanstack/react-router',
+      '@supabase/supabase-js',
+      'lucide-react', 'recharts', 'papaparse', 'sonner',
+      'clsx', 'tailwind-merge', 'class-variance-authority',
+      '@radix-ui/react-avatar', '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu', '@radix-ui/react-label',
+      '@radix-ui/react-slot', '@radix-ui/react-tooltip',
+    ],
   },
   server: {
     port: 3000,
