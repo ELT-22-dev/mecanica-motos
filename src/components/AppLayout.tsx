@@ -7,10 +7,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Menu } from 'lucide-react'
 import { toast } from 'sonner'
+import { useClinicBranding } from '@/hooks/useClinicBranding'
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, isLoading, isAuthenticated, isPasswordRecovery } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { clinicName } = useClinicBranding()
 
   if (isPasswordRecovery) {
     return <NewPasswordScreen />
@@ -60,7 +62,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           >
             <Menu className="size-5" />
           </Button>
-          <span className="font-semibold text-sm">OdontoManage Pro</span>
+          <span className="font-semibold text-sm">{clinicName}</span>
         </div>
         <div className="flex-1 overflow-y-auto">{children}</div>
       </main>
@@ -69,13 +71,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
 }
 
 function AuthShell({ children }: { children: ReactNode }) {
+  const { clinicName, logoDataUrl } = useClinicBranding()
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-6 px-4 text-center bg-background">
       <div className="space-y-2">
-        <div className="mx-auto flex items-center justify-center h-14 w-14 rounded-xl bg-primary text-primary-foreground text-2xl font-bold">
-          O
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">OdontoManage Pro</h1>
+        {logoDataUrl ? (
+          <img src={logoDataUrl} alt="" className="mx-auto h-14 w-14 rounded-xl object-cover" />
+        ) : (
+          <div className="mx-auto flex items-center justify-center h-14 w-14 rounded-xl bg-primary text-primary-foreground text-2xl font-bold">
+            {clinicName.charAt(0).toUpperCase()}
+          </div>
+        )}
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">{clinicName}</h1>
         <p className="text-muted-foreground max-w-sm">
           Sistema completo de gestao para sua clinica odontologica.
         </p>

@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
-import { User, Sun, Moon, Monitor, Download, Upload, Trash2, FileSpreadsheet, CalendarClock } from 'lucide-react'
+import { User, Sun, Moon, Monitor, Download, Upload, Trash2, FileSpreadsheet, CalendarClock, Building2, ImagePlus, X } from 'lucide-react'
 import { blink, exportAllData, importAllData, clearAllData } from '@/blink/client'
 import {
   parseCsv, detectColumnMapping, mapRowToPatient,
@@ -48,6 +48,7 @@ function SettingsPage() {
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const csvInputRef = useRef<HTMLInputElement>(null)
+  const logoInputRef = useRef<HTMLInputElement>(null)
   const googleCalendar = useGoogleCalendar()
   const [connectingGoogle, setConnectingGoogle] = useState(false)
   const [syncingAppointments, setSyncingAppointments] = useState(false)
@@ -58,6 +59,22 @@ function SettingsPage() {
   const [csvPreview, setCsvPreview] = useState<ParsedCsv | null>(null)
   const [csvMapping, setCsvMapping] = useState<Partial<Record<PatientField, string>>>({})
   const [importingCsv, setImportingCsv] = useState(false)
+
+  const { data: clinicSettings } = useQuery({
+    queryKey: ['clinic-settings'],
+    queryFn: async () => {
+      const rows = await blink.db.table<{ id: string; clinic_name: string | null; logo_data_url: string | null }>('clinic_settings').list()
+      return rows[0] ?? null
+    },
+  })
+  const [clinicName, setClinicName] = useState('')
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [savingClinic, setSavingClinic] = useState(false)
+
+  useEffect(() => {
+    setClinicName(clinicSettings?.clinic_name || '')
+    setLogoPreview(clinicSettings?.logo_data_url || null)
+  }, [clinicSettings])
 
   useEffect(() => {
     if (!user) return
@@ -72,6 +89,44 @@ function SettingsPage() {
       toast.success('Perfil atualizado')
     } catch (err: any) {
       toast.error(err?.message || 'Erro ao atualizar perfil')
+    }
+  }
+
+  const handleLogoFile = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Selecione um arquivo de imagem')
+      return
+    }
+    if (file.size > 1_000_000) {
+      toast.error('Imagem muito grande (maximo 1MB)')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => setLogoPreview(reader.result as string)
+    reader.onerror = () => toast.error('Erro ao ler a imagem')
+    reader.readAsDataURL(file)
+  }
+
+  const saveClinicBranding = async () => {
+    setSavingClinic(true)
+    try {
+      if (clinicSettings) {
+        await blink.db.table('clinic_settings').update(clinicSettings.id, {
+          clinic_name: clinicName,
+          logo_data_url: logoPreview,
+        } as any)
+      } else {
+        await blink.db.table('clinic_settings').create({
+          clinic_name: clinicName,
+          logo_data_url: logoPreview,
+        } as any)
+      }
+      queryClient.invalidateQueries({ queryKey: ['clinic-settings'] })
+      toast.success('Dados da clinica atualizados')
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro ao salvar dados da clinica')
+    } finally {
+      setSavingClinic(false)
     }
   }
 
@@ -248,6 +303,69 @@ function SettingsPage() {
               <Button type="submit" size="sm">Salvar perfil</Button>
             </div>
           </form>
+        </CardContent>
+      </Card>
+
+      {/* Dados da clinica */}
+      <Card className="border-border/60">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Building2 className="size-4" /> Dados da clinica
+          </CardTitle>
+          <CardDescription>Nome e logo aparecem na barra lateral e na tela de login.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            {logoPreview ? (
+              <div className="relative shrink-0">
+                <img src={logoPreview} alt="" className="size-16 rounded-lg object-cover border border-border/60" />
+                <button
+                  type="button"
+                  onClick={() => setLogoPreview(null)}
+                  className="absolute -top-1.5 -right-1.5 flex items-center justify-center size-5 rounded-full bg-destructive text-destructive-foreground cursor-pointer"
+                  aria-label="Remover logo"
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => logoInputRef.current?.click()}
+                className="flex items-center justify-center size-16 rounded-lg border border-dashed border-border/60 text-muted-foreground hover:bg-muted/50 transition-colors shrink-0 cursor-pointer"
+              >
+                <ImagePlus className="size-5" />
+              </button>
+            )}
+            <div className="flex-1 space-y-1.5">
+              <Label htmlFor="clinic-name">Nome da clinica</Label>
+              <Input
+                id="clinic-name"
+                value={clinicName}
+                onChange={(e) => setClinicName(e.target.value)}
+                placeholder="Clinica Odontologica Sorriso"
+              />
+            </div>
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) handleLogoFile(file)
+                e.target.value = ''
+              }}
+            />
+          </div>
+          <div className="flex justify-between items-center">
+            <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => logoInputRef.current?.click()}>
+              <ImagePlus className="size-4" /> {logoPreview ? 'Trocar logo' : 'Escolher logo'}
+            </Button>
+            <Button type="button" size="sm" onClick={saveClinicBranding} disabled={savingClinic}>
+              {savingClinic ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

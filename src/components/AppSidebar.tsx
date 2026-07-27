@@ -22,6 +22,7 @@ import {
   ChevronDown,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useClinicBranding } from '@/hooks/useClinicBranding'
 
 const SIDEBAR_KEY = 'odonto_sidebar'
 
@@ -55,6 +56,7 @@ export function AppSidebar({ user, onNavigate }: AppSidebarProps) {
     return localStorage.getItem(SIDEBAR_KEY) === 'true'
   })
   const location = useLocation()
+  const { clinicName, logoDataUrl } = useClinicBranding()
 
   const toggle = useCallback(() => {
     setCollapsed((v) => {
@@ -86,11 +88,15 @@ export function AppSidebar({ user, onNavigate }: AppSidebarProps) {
         >
           {!collapsed && (
             <>
-              <div className="flex items-center justify-center size-7 rounded-md bg-sidebar-primary text-sidebar-primary-foreground text-xs font-bold shrink-0">
-                O
-              </div>
+              {logoDataUrl ? (
+                <img src={logoDataUrl} alt="" className="size-7 rounded-md object-cover shrink-0" />
+              ) : (
+                <div className="flex items-center justify-center size-7 rounded-md bg-sidebar-primary text-sidebar-primary-foreground text-xs font-bold shrink-0">
+                  {clinicName.charAt(0).toUpperCase()}
+                </div>
+              )}
               <span className="flex-1 font-semibold text-sm truncate text-sidebar-foreground">
-                OdontoManage
+                {clinicName}
               </span>
             </>
           )}
