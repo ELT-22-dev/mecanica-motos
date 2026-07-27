@@ -4,8 +4,9 @@ import { blink } from '@/blink/client'
 import { useState, useMemo } from 'react'
 import {
   CalendarDays, Clock, Plus, Search, ChevronLeft, ChevronRight,
-  MoreHorizontal, Edit, Trash2, CheckCircle, XCircle, UserX, Play
+  MoreHorizontal, Edit, Trash2, CheckCircle, XCircle, UserX, Play, MessageCircle
 } from 'lucide-react'
+import { openWhatsApp, buildAppointmentReminderMessage } from '@/lib/whatsapp'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -27,7 +28,7 @@ interface Appointment {
 }
 
 interface Patient {
-  id: string; name: string
+  id: string; name: string; phone: string | null; whatsapp: string | null
 }
 
 export const Route = createFileRoute('/_app/agenda')({
@@ -56,6 +57,27 @@ function AgendaPage() {
   })
 
   const dayAppts = appointments.filter((a) => a.date === selectedDate)
+
+  const sendReminder = (a: Appointment) => {
+    const patient = patients.find((p) => p.id === a.patient_id)
+    const contact = patient?.whatsapp || patient?.phone
+    if (!contact) {
+      toast.error('Este paciente nao tem telefone ou WhatsApp cadastrado')
+      return
+    }
+    const message = buildAppointmentReminderMessage({
+      patientName: a.patient_name,
+      date: a.date,
+      time: a.time,
+      dentistName: a.dentist_name,
+      type: a.type,
+    })
+    try {
+      openWhatsApp(contact, message)
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro ao abrir WhatsApp')
+    }
+  }
 
   const weekDates = useMemo(() => {
     const d = new Date(selectedDate + 'T00:00')
@@ -93,7 +115,7 @@ function AgendaPage() {
   }
 
   const handleNewAppt = async () => {
-    if (!apptForm.patient_name.trim() || !apptForm.time) {
+    if (!apptForm.patient_id || !apptForm.time) {
       toast.error('Paciente e horario sao obrigatorios')
       return
     }
@@ -215,7 +237,10 @@ function AgendaPage() {
                         <MoreHorizontal className="size-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => sendReminder(a)}>
+                        <MessageCircle className="size-3.5 mr-2 text-emerald-600" /> Lembrete (WhatsApp)
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => updateStatus(a.id, 'confirmed')}>
                         <CheckCircle className="size-3.5 mr-2 text-green-600" /> Confirmar
                       </DropdownMenuItem>
@@ -252,11 +277,21 @@ function AgendaPage() {
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label>Paciente *</Label>
-              <Input
-                placeholder="Nome do paciente"
-                value={apptForm.patient_name}
-                onChange={(e) => setApptForm((f) => ({ ...f, patient_name: e.target.value }))}
-              />
+              <select
+                className="file:text-foreground dark:bg-input/30 border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm"
+                value={apptForm.patient_id}
+                onChange={(e) => {
+                  const patient = patients.find((p) => p.id === e.target.value)
+                  setApptForm((f) => ({ ...f, patient_id: e.target.value, patient_name: patient?.name || '' }))
+                }}
+              >
+                <option value="">
+                  {patients.length === 0 ? 'Nenhum paciente cadastrado' : 'Selecione um paciente'}
+                </option>
+                {patients.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">

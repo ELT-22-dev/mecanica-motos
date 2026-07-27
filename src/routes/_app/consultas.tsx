@@ -6,8 +6,9 @@ import {
   Stethoscope, Search, CheckCircle, XCircle, UserX,
   Play, Trash2, CalendarDays, Clock, ArrowUpDown,
   Activity, TrendingUp, CalendarRange, Percent,
-  MoreHorizontal, ChevronDown, Filter,
+  MoreHorizontal, ChevronDown, Filter, MessageCircle,
 } from 'lucide-react'
+import { openWhatsApp, buildAppointmentReminderMessage } from '@/lib/whatsapp'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -23,6 +24,10 @@ interface Appointment {
   id: string; patient_id: string; patient_name: string; dentist_name: string | null
   date: string; time: string; type: string; room: string | null
   notes: string | null; status: string; created_at: string
+}
+
+interface Patient {
+  id: string; phone: string | null; whatsapp: string | null
 }
 
 export const Route = createFileRoute('/_app/consultas')({
@@ -56,6 +61,32 @@ function ConsultasPage() {
     queryKey: ['appointments'],
     queryFn: () => blink.db.table<Appointment>('appointments').list(),
   })
+
+  const { data: patients = [] } = useQuery<Patient[]>({
+    queryKey: ['patients'],
+    queryFn: () => blink.db.table<Patient>('patients').list(),
+  })
+
+  const sendReminder = (a: Appointment) => {
+    const patient = patients.find((p) => p.id === a.patient_id)
+    const contact = patient?.whatsapp || patient?.phone
+    if (!contact) {
+      toast.error('Este paciente nao tem telefone ou WhatsApp cadastrado')
+      return
+    }
+    const message = buildAppointmentReminderMessage({
+      patientName: a.patient_name,
+      date: a.date,
+      time: a.time,
+      dentistName: a.dentist_name,
+      type: a.type,
+    })
+    try {
+      openWhatsApp(contact, message)
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro ao abrir WhatsApp')
+    }
+  }
 
   // Stats
   const stats = useMemo(() => {
@@ -379,6 +410,15 @@ function ConsultasPage() {
 
                       {/* Quick actions — visible on row hover */}
                       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-400"
+                          title="Enviar lembrete (WhatsApp)"
+                          onClick={() => sendReminder(a)}
+                        >
+                          <MessageCircle className="size-3.5" />
+                        </Button>
                         {a.status !== 'confirmed' && a.status !== 'in_progress' && a.status !== 'completed' && (
                           <Button
                             variant="ghost"
@@ -421,6 +461,9 @@ function ConsultasPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-44">
+                            <DropdownMenuItem onClick={() => sendReminder(a)}>
+                              <MessageCircle className="size-3.5 mr-2 text-emerald-600" /> Lembrete (WhatsApp)
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => updateStatus(a.id, 'confirmed')}>
                               <CheckCircle className="size-3.5 mr-2 text-green-600" /> Confirmar
                             </DropdownMenuItem>

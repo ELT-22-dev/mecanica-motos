@@ -4,7 +4,7 @@ import { blink } from '@/blink/client'
 import { useState } from 'react'
 import {
   ArrowLeft, Edit, Trash2, Phone, Mail, MapPin,
-  CalendarDays, Stethoscope, FileText, Clock, ChevronRight
+  CalendarDays, Stethoscope, FileText, Clock, ChevronRight, MessageCircle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { openWhatsApp, buildAppointmentReminderMessage, buildGreetingMessage } from '@/lib/whatsapp'
 
 interface Patient {
   id: string; name: string; cpf: string | null; rg: string | null
@@ -52,6 +53,33 @@ function PatientDetailPage() {
   })
 
   const patientAppts = appointments.filter((a) => a.patient_id === id)
+
+  const handleWhatsApp = () => {
+    if (!patient) return
+    const contact = patient.whatsapp || patient.phone
+    if (!contact) {
+      toast.error('Este paciente nao tem telefone ou WhatsApp cadastrado')
+      return
+    }
+    const today = new Date().toISOString().slice(0, 10)
+    const upcoming = patientAppts
+      .filter((a) => a.date >= today && (a.status === 'scheduled' || a.status === 'confirmed'))
+      .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))[0]
+    const message = upcoming
+      ? buildAppointmentReminderMessage({
+          patientName: patient.name,
+          date: upcoming.date,
+          time: upcoming.time,
+          dentistName: upcoming.dentist_name,
+          type: upcoming.type,
+        })
+      : buildGreetingMessage(patient.name)
+    try {
+      openWhatsApp(contact, message)
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro ao abrir WhatsApp')
+    }
+  }
 
   const handleDelete = async () => {
     if (!patient) return
@@ -126,6 +154,12 @@ function PatientDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
+          {(patient.whatsapp || patient.phone) && (
+            <Button variant="outline" size="sm" className="gap-2" onClick={handleWhatsApp}>
+              <MessageCircle className="size-4" />
+              WhatsApp
+            </Button>
+          )}
           <Button variant="outline" size="sm" className="text-destructive hover:text-destructive gap-2" onClick={handleDelete}>
             <Trash2 className="size-4" />
             Excluir

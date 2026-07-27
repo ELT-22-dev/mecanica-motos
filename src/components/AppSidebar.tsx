@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react'
-import type { BlinkUser } from '@blinkdotnew/sdk'
-import { blink } from '@/blink/client'
+import { blink, type LocalUser } from '@/blink/client'
 import { Link, useLocation } from '@tanstack/react-router'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -46,7 +45,7 @@ const BOTTOM_ITEMS: NavItemDef[] = [
 ]
 
 interface AppSidebarProps {
-  user: BlinkUser | null
+  user: LocalUser | null
   onNavigate?: () => void
 }
 
