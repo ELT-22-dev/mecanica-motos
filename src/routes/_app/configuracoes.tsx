@@ -1,8 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
-import { Sun, Moon, Monitor, Download, Upload, Trash2, FileSpreadsheet, Building2, ImagePlus, X } from 'lucide-react'
-import { blink, exportAllData, importAllData, clearAllData } from '@/blink/client'
+import { Sun, Moon, Monitor, Download, Upload, Trash2, FileSpreadsheet, Building2, ImagePlus, X, RotateCcw } from 'lucide-react'
+import { blink, exportAllData, importAllData, clearAllData, DEMO_MODE } from '@/blink/client'
+import { resetDemoData } from '@/blink/demoSeed'
 import {
   parseCsv, detectColumnMapping, mapRowToClient,
   CLIENT_FIELD_LABELS, type ParsedCsv, type ClientField,
@@ -179,6 +180,13 @@ function SettingsPage() {
     } finally {
       setImportingCsv(false)
     }
+  }
+
+  const handleResetDemoData = () => {
+    if (!confirm('Isso vai apagar os dados atuais e restaurar os dados de exemplo originais. Continuar?')) return
+    resetDemoData()
+    queryClient.invalidateQueries()
+    toast.success('Dados de demonstracao restaurados')
   }
 
   const handleClearData = async () => {
@@ -361,10 +369,15 @@ function SettingsPage() {
             </p>
           </div>
 
-          <div className="pt-3 border-t border-border/60">
+          <div className="pt-3 border-t border-border/60 flex flex-wrap gap-3">
             <Button type="button" variant="outline" size="sm" className="gap-2 text-destructive hover:text-destructive" onClick={handleClearData}>
               <Trash2 className="size-4" /> Apagar todos os dados
             </Button>
+            {DEMO_MODE && (
+              <Button type="button" variant="outline" size="sm" className="gap-2" onClick={handleResetDemoData}>
+                <RotateCcw className="size-4" /> Restaurar dados de demonstracao
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

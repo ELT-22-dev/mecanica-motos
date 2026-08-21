@@ -3,7 +3,14 @@
  * same call surface the routes already use (`blink.db.table(name).list/get/
  * create/update/delete`) so page code doesn't need to change when the storage
  * backend changes — this used to talk to Supabase, now it talks to `/api/*`.
+ *
+ * DEMO_MODE (`VITE_DEMO_MODE=true`, set for the Vercel portfolio deployment)
+ * swaps this for a browser-only `localStorage` store (`localStore.ts`, seeded
+ * by `demoSeed.ts`) — there is no server to talk to on that deployment.
  */
+import { localTable, clearLocalTable } from './localStore'
+
+export const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true'
 
 type OrderBy = Record<string, 'asc' | 'desc'>
 
@@ -33,7 +40,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return (await res.json()) as T
 }
 
-function table<T extends { id?: string }>(name: string) {
+function apiTable<T extends { id?: string }>(name: string) {
   return {
     async list(options?: ListOptions): Promise<T[]> {
       const query = options?.orderBy ? `?orderBy=${encodeURIComponent(JSON.stringify(options.orderBy))}` : ''
@@ -61,6 +68,10 @@ function table<T extends { id?: string }>(name: string) {
   }
 }
 
+function table<T extends { id?: string }>(name: string) {
+  return DEMO_MODE ? localTable<T>(name) : apiTable<T>(name)
+}
+
 const BACKUP_TABLES = [
   'clients', 'vehicles', 'appointments', 'parts',
   'service_orders', 'service_order_items', 'transactions',
@@ -84,6 +95,10 @@ export async function importAllData(json: string) {
 }
 
 export async function clearAllData() {
+  if (DEMO_MODE) {
+    for (const name of BACKUP_TABLES) clearLocalTable(name)
+    return
+  }
   for (const name of BACKUP_TABLES) {
     await request(`/api/${name}`, { method: 'DELETE' })
   }

@@ -5,7 +5,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { createRouter } from './router'
+import { DEMO_MODE } from '@/blink/client'
+import { seedDemoDataIfNeeded } from '@/blink/demoSeed'
 import './index.css'
+
+if (DEMO_MODE) seedDemoDataIfNeeded()
 
 // staleTime avoids an extra API round-trip every time a page remounts (e.g.
 // switching tabs in the sidebar) — data is refetched at most once per window

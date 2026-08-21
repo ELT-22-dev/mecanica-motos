@@ -8,6 +8,10 @@ Construído como um app **single-tenant e auto-hospedado**: cada oficina roda su
 com seu próprio arquivo de banco de dados (SQLite) — não depende de nenhum serviço de terceiros e
 não é um SaaS multi-cliente. Não há tela de login: é uma única oficina usando o sistema.
 
+> Este repositório também tem um **modo demonstração** (`VITE_DEMO_MODE=true`), usado apenas para
+> mostrar o sistema como portfólio — roda 100% no navegador (sem backend), com dados de exemplo.
+> Não é como o sistema real roda para uma oficina de verdade; veja "Modo demonstração" abaixo.
+
 ## Funcionalidades
 
 - **Clientes** — cadastro completo, histórico de veículos e de ordens de serviço por cliente,
@@ -67,3 +71,20 @@ Backend próprio e pequeno: os componentes React chamam `src/blink/client.ts`, q
 REST servida por `server/index.mjs` (Express + SQLite via `better-sqlite3`) — sem depender de
 nenhum serviço de terceiros. Veja [`CLAUDE.md`](CLAUDE.md) para detalhes de arquitetura, modelo de
 dados e decisões de design.
+
+## Modo demonstração (portfólio, sem backend)
+
+Para publicar como amostra (ex: Vercel), existe um modo 100% front-end: em vez de chamar a API,
+`src/blink/client.ts` usa `src/blink/localStore.ts` (dados em `localStorage` do navegador),
+semeados com um cenário de exemplo por `src/blink/demoSeed.ts`. Ativa com a variável de ambiente
+`VITE_DEMO_MODE=true` no build:
+
+```bash
+VITE_DEMO_MODE=true npm run build   # gera dist/ sem nenhuma dependencia de backend
+```
+
+Na Vercel: configurar `VITE_DEMO_MODE=true` nas variáveis de ambiente do projeto (framework preset
+Vite, comando de build padrão `npm run build`). O `vercel.json` já cuida do fallback de rotas do
+SPA. Um badge "DEMO" aparece na barra lateral sempre que esse modo está ativo, e um botão em
+Configuracoes permite restaurar os dados de exemplo a qualquer momento. **Isso não é como o
+sistema roda de verdade para uma oficina** — para isso, veja `docs/IMPLANTACAO.md`.

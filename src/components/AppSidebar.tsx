@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useWorkshopBranding } from '@/hooks/useWorkshopBranding'
+import { DEMO_MODE } from '@/blink/client'
 
 const SIDEBAR_KEY = 'moto_sidebar'
 
@@ -88,9 +89,14 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                   {workshopName.charAt(0).toUpperCase()}
                 </div>
               )}
-              <span className="flex-1 font-semibold text-sm truncate text-sidebar-foreground">
+              <span className="flex-1 min-w-0 font-semibold text-sm truncate text-sidebar-foreground">
                 {workshopName}
               </span>
+              {DEMO_MODE && (
+                <span className="shrink-0 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-semibold px-1.5 py-0.5">
+                  DEMO
+                </span>
+              )}
             </>
           )}
           <Tooltip>
