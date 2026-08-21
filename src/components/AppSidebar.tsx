@@ -1,7 +1,5 @@
 import { useState, useCallback } from 'react'
-import { blink, type LocalUser } from '@/blink/client'
 import { Link, useLocation } from '@tanstack/react-router'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
   Tooltip,
@@ -18,7 +16,6 @@ import {
   DollarSign,
   BarChart3,
   Settings,
-  LogOut,
   PanelLeft,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -47,11 +44,10 @@ const BOTTOM_ITEMS: NavItemDef[] = [
 ]
 
 interface AppSidebarProps {
-  user: LocalUser | null
   onNavigate?: () => void
 }
 
-export function AppSidebar({ user, onNavigate }: AppSidebarProps) {
+export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false
     return localStorage.getItem(SIDEBAR_KEY) === 'true'
@@ -66,10 +62,6 @@ export function AppSidebar({ user, onNavigate }: AppSidebarProps) {
       return next
     })
   }, [])
-
-  const displayName = user?.displayName || user?.email?.split('@')[0] || 'Usuario'
-  const email = user?.email || ''
-  const initials = (displayName || 'U').slice(0, 2).toUpperCase()
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -157,75 +149,6 @@ export function AppSidebar({ user, onNavigate }: AppSidebarProps) {
               onClick={onNavigate}
             />
           ))}
-        </div>
-
-        {/* Footer — user + logout */}
-        <div
-          className={cn(
-            'shrink-0 border-t border-sidebar-border',
-            collapsed ? 'flex flex-col items-center gap-1 p-2' : 'p-3 space-y-1'
-          )}
-        >
-          {collapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button className="flex items-center justify-center size-8 rounded-md hover:bg-sidebar-accent transition-colors cursor-pointer">
-                  <Avatar className="size-6 shrink-0">
-                    <AvatarFallback className="text-[10px] bg-sidebar-accent text-sidebar-accent-foreground">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                {displayName} · {email}
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <button className="flex items-center gap-2 rounded-md hover:bg-sidebar-accent transition-colors cursor-pointer w-full px-2 py-1.5">
-              <Avatar className="size-6 shrink-0">
-                <AvatarFallback className="text-[10px] bg-sidebar-accent text-sidebar-accent-foreground">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0 text-left">
-                <p className="text-xs font-medium leading-tight truncate text-sidebar-foreground">
-                  {displayName}
-                </p>
-                <p className="text-[10px] text-sidebar-foreground/50 leading-tight truncate">
-                  {email}
-                </p>
-              </div>
-            </button>
-          )}
-
-          {collapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="size-8 p-0 text-sidebar-foreground/50 hover:text-sidebar-foreground"
-                  onClick={() => blink.auth.logout()}
-                >
-                  <LogOut className="size-4 shrink-0" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Sair</TooltipContent>
-            </Tooltip>
-          ) : (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start px-2 gap-2 text-sidebar-foreground/50 hover:text-sidebar-foreground"
-              onClick={() => blink.auth.logout()}
-            >
-              <LogOut className="size-4 shrink-0" />
-              Sair
-            </Button>
-          )}
         </div>
       </div>
     </TooltipProvider>

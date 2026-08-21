@@ -1,13 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
-import { User, Sun, Moon, Monitor, Download, Upload, Trash2, FileSpreadsheet, Building2, ImagePlus, X } from 'lucide-react'
+import { Sun, Moon, Monitor, Download, Upload, Trash2, FileSpreadsheet, Building2, ImagePlus, X } from 'lucide-react'
 import { blink, exportAllData, importAllData, clearAllData } from '@/blink/client'
 import {
   parseCsv, detectColumnMapping, mapRowToClient,
   CLIENT_FIELD_LABELS, type ParsedCsv, type ClientField,
 } from '@/lib/clientImport'
-import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -42,14 +41,11 @@ function applyTheme(mode: ThemeMode) {
 }
 
 function SettingsPage() {
-  const { user } = useAuth()
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const csvInputRef = useRef<HTMLInputElement>(null)
   const logoInputRef = useRef<HTMLInputElement>(null)
 
-  const [name, setName] = useState(user?.displayName || '')
-  const [email, setEmail] = useState(user?.email || '')
   const [theme, setTheme] = useState<ThemeMode>(() => getStoredTheme())
   const [csvPreview, setCsvPreview] = useState<ParsedCsv | null>(null)
   const [csvMapping, setCsvMapping] = useState<Partial<Record<ClientField, string>>>({})
@@ -70,22 +66,6 @@ function SettingsPage() {
     setWorkshopName(workshopSettings?.workshop_name || '')
     setLogoPreview(workshopSettings?.logo_data_url || null)
   }, [workshopSettings])
-
-  useEffect(() => {
-    if (!user) return
-    setName(user.displayName)
-    setEmail(user.email)
-  }, [user])
-
-  const saveProfile = async (e: React.FormEvent) => {
-    e.preventDefault()
-    try {
-      await blink.auth.updateProfile({ name, email })
-      toast.success('Perfil atualizado')
-    } catch (err: any) {
-      toast.error(err?.message || 'Erro ao atualizar perfil')
-    }
-  }
 
   const handleLogoFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -218,33 +198,6 @@ function SettingsPage() {
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Configuracoes</h1>
         <p className="text-sm text-muted-foreground mt-1">Perfil, aparencia e dados do sistema</p>
       </div>
-
-      {/* Perfil */}
-      <Card className="border-border/60">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base flex items-center gap-2">
-            <User className="size-4" /> Perfil
-          </CardTitle>
-          <CardDescription>Essas informacoes aparecem na barra lateral do sistema.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={saveProfile} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="profile-name">Nome</Label>
-                <Input id="profile-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" required />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="profile-email">Email</Label>
-                <Input id="profile-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" />
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <Button type="submit" size="sm">Salvar perfil</Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
 
       {/* Dados da oficina */}
       <Card className="border-border/60">

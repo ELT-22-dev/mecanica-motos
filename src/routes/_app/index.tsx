@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { blink } from '@/blink/client'
-import { useAuth } from '@/hooks/useAuth'
 import {
   Users, CalendarDays, Wrench, PackageX, Clock, AlertTriangle
 } from 'lucide-react'
@@ -33,8 +32,6 @@ export const Route = createFileRoute('/_app/')({
 })
 
 function Dashboard() {
-  const { user } = useAuth()
-
   const { data: clients = [] } = useQuery<Client[]>({
     queryKey: ['clients'],
     queryFn: () => blink.db.table<Client>('clients').list(),
@@ -127,7 +124,7 @@ function Dashboard() {
           Dashboard
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Bem-vindo{user?.displayName ? `, ${user.displayName}` : ''} · Visao geral da oficina
+          Visao geral da oficina
         </p>
       </div>
 

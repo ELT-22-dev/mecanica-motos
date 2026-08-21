@@ -1,82 +1,107 @@
 # Guia de Implantação — MotoManage Pro
 
 Este documento explica como colocar o sistema no ar **para uma oficina especifica**. Cada
-oficina tem sua propria instalacao, com seu proprio banco de dados e credenciais — nada e
-compartilhado entre oficinas diferentes (nao e um SaaS multi-cliente).
+oficina tem sua propria instalacao, com seu proprio banco de dados — nada e compartilhado entre
+oficinas diferentes (nao e um SaaS multi-cliente), e nao depende de nenhum servico de terceiros
+(Supabase, Vercel, etc.): tudo roda num unico processo Node que voce mesmo hospeda.
 
 Guarde este arquivo junto do codigo. Se precisar montar o sistema para uma nova oficina do zero,
 siga os passos na ordem.
 
 ---
 
-## 1. Banco de dados (Supabase)
+## 1. Como o sistema funciona
 
-1. Criar conta gratuita em [supabase.com](https://supabase.com) e um novo projeto.
-   - Guarde a senha do banco em lugar seguro (nao precisa dela no dia a dia).
-   - Escolha uma regiao proxima do Brasil (ex: Sao Paulo / `sa-east-1`).
-2. No painel do projeto, ir em **SQL Editor** e rodar, **nesta ordem**, o conteudo de cada
-   arquivo da raiz do projeto:
-   1. `supabase-schema.sql` — cria as tabelas principais (clientes, veiculos, agendamentos,
-      pecas, ordens de servico e itens, transacoes) e ativa Row Level Security (cada conta so
-      ve os proprios dados).
-   2. `supabase-indices.sql` — indices de performance.
-   3. `supabase-migration-workshop-branding.sql` — tabela de nome/logo da oficina.
-3. Em **Authentication → Sign In / Providers → Email**:
-   - Confirme que o provedor **Email** esta **ativado** (nao "Deficiente").
-   - Desative **"Confirmar e-mail"**, a menos que a oficina realmente queira esse passo extra
-     (para uso de uma oficina so, geralmente e desnecessario).
-4. Em **Settings → API**, copiar dois valores (vao para o `.env`, passo 2):
-   - **Project URL**
-   - **anon public key** — **nunca** use a chave `service_role` no codigo do app; essa e secreta
-     e da acesso total ao banco.
+- **Banco de dados**: um unico arquivo SQLite (`data/motomanage.db`), criado automaticamente na
+  primeira vez que o servidor roda. Nao precisa de conta em nenhum servico externo.
+- **Servidor**: um processo Node (`server/index.mjs`) que serve tanto a API quanto os arquivos do
+  site (a pasta `dist/` gerada pelo build). Ele precisa ficar **rodando o tempo todo** enquanto a
+  oficina for usar o sistema — diferente de um site estatico, aqui existe um servidor de verdade.
+- **Login**: nao existe. O sistema abre direto no Dashboard — e uma unica oficina usando, entao
+  nao ha necessidade de conta/senha. Isso tambem significa que **qualquer pessoa com acesso a
+  maquina/rede onde o servidor roda consegue usar o sistema** (ver secao 5 sobre exposicao na
+  internet).
 
-## 2. Variaveis de ambiente
+## 2. Preparar o servidor
 
-Criar um arquivo `.env` na raiz do projeto (nunca commitado — ja esta no `.gitignore`):
+Requisitos: [Node.js](https://nodejs.org) 20 ou mais recente instalado na maquina/servidor que vai
+rodar o sistema.
 
-```
-VITE_SUPABASE_URL=https://SEU-PROJETO.supabase.co
-VITE_SUPABASE_ANON_KEY=SUA_CHAVE_ANON_AQUI
+```bash
+npm install --legacy-peer-deps   # instala as dependencias (inclui compilar o better-sqlite3)
+npm run build                     # gera a pasta dist/ (front-end de producao)
+npm start                         # sobe o servidor em http://localhost:3001 (serve dist/ + API)
 ```
 
-## 3. Hospedagem
+- A porta padrao e `3001`; para mudar, defina a variavel de ambiente `PORT` antes de rodar
+  (`PORT=8080 npm start`).
+- O banco fica em `data/motomanage.db` por padrao; para guardar em outro lugar (ex: um disco com
+  backup automatico), defina `DB_PATH=/caminho/para/motomanage.db`.
+- **Backup do banco**: basta copiar o arquivo `data/motomanage.db` (idealmente com o servidor
+  parado, ou usando a rotina de backup do proprio sistema em Configuracoes → "Exportar backup",
+  que gera um `.json` com todos os dados).
 
-O `npm run build` gera uma pasta `dist/` **100% estatica** (HTML/JS/CSS) — nao roda nenhum
-servidor Node em producao, entao qualquer hospedagem de arquivos estaticos serve.
+## 3. Manter o servidor rodando
 
-### Opcao A — Vercel (mais simples)
+`npm start` roda em primeiro plano — se fechar o terminal, o sistema para. Para produção, use um
+gerenciador de processos que reinicia o servidor sozinho se cair ou se a maquina reiniciar:
 
-- Plano gratuito ("Hobby") funciona tecnicamente para sempre, sem expiracao — mas os termos de
-  uso da Vercel dizem que esse plano e para uso pessoal/nao-comercial. Para uma oficina (uso
-  comercial), o correto seria o plano **Pro** (~$20/mes), mesmo que o trafego seja baixissimo.
-- Configurar as variaveis de ambiente do passo 2 no painel do projeto na Vercel.
-- Roteamento SPA ja funciona automaticamente na Vercel (nao precisa configurar nada extra).
+### Opcao A — PM2 (mais simples, funciona em Windows/Linux/Mac)
 
-### Opcao B — Hostinger (hospedagem compartilhada, nao precisa de VPS)
+```bash
+npm install -g pm2
+pm2 start server/index.mjs --name motomanage
+pm2 save
+pm2 startup   # segue as instrucoes impressas para iniciar o PM2 junto com o sistema operacional
+```
 
-- Como o resultado e so arquivos estaticos, o plano de hospedagem compartilhada mais barato ja
-  resolve — **nao e necessario VPS**.
-- Rodar `npm run build` localmente, depois subir o **conteudo** da pasta `dist/` (nao a pasta em
-  si) para `public_html` via Gerenciador de Arquivos ou FTP.
-- **Precisa de um dominio** — hospedagem compartilhada normalmente nao expoe o site por IP puro,
-  so por dominio vinculado ao plano.
-- O arquivo `dist/_redirects` (formato Vercel/Netlify) **nao funciona no Apache da Hostinger** —
-  precisa ser substituido por um `.htaccess` com regra de rewrite equivalente para o roteamento
-  interno do app funcionar em links diretos (ex: abrir direto em `/clientes/123`).
+### Opcao B — systemd (Linux/VPS)
 
-### Depois de hospedar, sempre atualizar
+Crie `/etc/systemd/system/motomanage.service`:
 
-- **Supabase** → Authentication → URL Configuration → atualizar a "Site URL" para a URL final
-  (usada nos links de "esqueci minha senha" — se nao atualizar, o link de redefinicao de senha
-  aponta para o lugar errado).
+```ini
+[Unit]
+Description=MotoManage Pro
+After=network.target
 
-## 4. Checklist rapido para uma oficina nova
+[Service]
+WorkingDirectory=/caminho/para/mecanica-motos
+ExecStart=/usr/bin/node server/index.mjs
+Restart=always
+Environment=PORT=3001
 
-- [ ] Projeto Supabase criado, os 3 arquivos SQL rodados na ordem
-- [ ] Confirmacao de email desativada (ou aceitar o fluxo com confirmacao, se preferir)
-- [ ] `.env` preenchido com URL + chave anon do Supabase
-- [ ] Build gerado e hospedado (Vercel ou Hostinger)
-- [ ] Dominio apontando para a hospedagem
-- [ ] Supabase atualizado com a URL final de producao
-- [ ] Login de teste criado e conferido (cadastro de cliente, veiculo, agenda, ordem de servico,
-      estoque, financeiro)
+[Install]
+WantedBy=multi-user.target
+```
+
+Depois: `sudo systemctl enable --now motomanage`.
+
+## 4. Onde rodar
+
+- **Na propria maquina da oficina** (um PC/mini-PC dedicado): o sistema fica acessivel apenas na
+  rede local (outros computadores/celulares da oficina acessam via `http://IP-DA-MAQUINA:3001`).
+  Simples, sem custo de hospedagem, mas so acessivel dentro da oficina.
+- **Um VPS barato** (ex: qualquer provedor que ofereça uma maquina Linux com Node instalavel):
+  acessivel de qualquer lugar. Nesse caso, configure um dominio + HTTPS na frente (ver secao 5).
+
+Hospedagem 100% estatica (Vercel free, Netlify, Hostinger compartilhado) **nao serve mais** —
+esses planos nao rodam um processo Node persistente, e agora o sistema precisa de um.
+
+## 5. Expor na internet (opcional) — dominio + HTTPS + protecao de acesso
+
+Se o servidor for acessado de fora da rede da oficina (ex: dono quer ver o financeiro de casa),
+coloque um proxy reverso (nginx, Caddy) na frente do processo Node para dar HTTPS com um dominio
+proprio. **Como nao ha login**, tambem vale adicionar autenticacao no proprio proxy reverso (ex:
+`auth_basic` do nginx, ou Basic Auth do Caddy) ou restringir por VPN, para nao deixar os dados da
+oficina abertos a qualquer um que descubra a URL.
+
+## 6. Checklist rapido para uma oficina nova
+
+- [ ] Node.js instalado na maquina/servidor
+- [ ] `npm install --legacy-peer-deps` e `npm run build` rodados
+- [ ] `npm start` (ou PM2/systemd) rodando e reiniciando sozinho se cair
+- [ ] Testado o caminho feliz: cadastro de cliente, veiculo, agenda, ordem de servico, estoque,
+      financeiro
+- [ ] Rotina de backup combinada (copiar `data/motomanage.db` periodicamente, ou usar o botao
+      "Exportar backup" em Configuracoes)
+- [ ] Se acessivel pela internet: dominio + HTTPS + autenticacao no proxy reverso configurados

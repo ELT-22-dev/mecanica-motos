@@ -4,8 +4,9 @@ Sistema completo de gestão para oficinas mecânicas especializadas em motos —
 agendamentos, ordens de serviço (mão de obra + peças), estoque com alertas de baixa, financeiro e
 relatórios gerenciais, tudo em uma interface web única.
 
-Construído como um app **single-tenant**: cada oficina roda sua própria instância com seu próprio
-projeto Supabase — não é um SaaS multi-cliente.
+Construído como um app **single-tenant e auto-hospedado**: cada oficina roda sua própria instância
+com seu próprio arquivo de banco de dados (SQLite) — não depende de nenhum serviço de terceiros e
+não é um SaaS multi-cliente. Não há tela de login: é uma única oficina usando o sistema.
 
 ## Funcionalidades
 
@@ -30,10 +31,11 @@ projeto Supabase — não é um SaaS multi-cliente.
 ## Stack
 
 - [React 19](https://react.dev) + [TypeScript](https://www.typescriptlang.org)
-- [TanStack Router](https://tanstack.com/router) (file-based) + [TanStack Start](https://tanstack.com/start) (SSR + prerender)
+- [TanStack Router](https://tanstack.com/router) (file-based, SPA — sem SSR)
 - [TanStack Query](https://tanstack.com/query) para cache/estado de dados
-- [Supabase](https://supabase.com) (Postgres + Auth) como backend — sem servidor próprio, o
-  front-end fala direto com o Supabase e a segurança é garantida por Row Level Security
+- [Express](https://expressjs.com) + [better-sqlite3](https://github.com/WiseLibs/better-sqlite3)
+  como backend — um pequeno servidor próprio auto-hospedado, sem depender de nenhum serviço de
+  terceiros (ver `server/`)
 - [Tailwind CSS v4](https://tailwindcss.com) + [shadcn/ui](https://ui.shadcn.com) (Radix UI)
 - [Recharts](https://recharts.org) para os gráficos do Financeiro/Relatórios
 - [Vite](https://vitejs.dev)
@@ -42,18 +44,18 @@ projeto Supabase — não é um SaaS multi-cliente.
 
 ```bash
 npm install --legacy-peer-deps
-# crie um .env na raiz com VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY
-npm run dev              # http://localhost:3000
+npm run dev              # sobe a API (:3001) e o Vite dev server (:3000) juntos
 ```
 
-Passo a passo completo de implantação (criar o projeto Supabase, rodar as migrações SQL,
-hospedagem) em [`docs/IMPLANTACAO.md`](docs/IMPLANTACAO.md).
+Passo a passo completo de implantação (build de produção, manter o servidor rodando, hospedagem)
+em [`docs/IMPLANTACAO.md`](docs/IMPLANTACAO.md).
 
 ## Scripts
 
 ```bash
-npm run build             # build de producao (client + SSR + prerender) em dist/
-npm run preview           # preview do build de producao
+npm run build             # build de producao (SPA estatica) em dist/
+npm start                 # roda o servidor de producao (API + dist/) em :3001
+npm run preview           # preview do build de producao (só o front-end, sem API)
 npx tsc --noEmit          # checagem de tipos
 npm run lint:js           # ESLint
 npm run lint:css          # Stylelint
@@ -61,7 +63,7 @@ npm run lint:css          # Stylelint
 
 ## Arquitetura
 
-Não há backend próprio: os componentes React chamam o Supabase diretamente pelo cliente
-`src/blink/client.ts`, e a segurança é garantida inteiramente por Row Level Security no Postgres
-(`supabase-schema.sql`). Veja [`CLAUDE.md`](CLAUDE.md) para detalhes de arquitetura, modelo de
+Backend próprio e pequeno: os componentes React chamam `src/blink/client.ts`, que fala com a API
+REST servida por `server/index.mjs` (Express + SQLite via `better-sqlite3`) — sem depender de
+nenhum serviço de terceiros. Veja [`CLAUDE.md`](CLAUDE.md) para detalhes de arquitetura, modelo de
 dados e decisões de design.

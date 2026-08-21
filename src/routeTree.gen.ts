@@ -11,19 +11,19 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
-import { Route as AppRelatoriosRouteImport } from './routes/_app/relatorios'
-import { Route as AppOrdensServicoRouteImport } from './routes/_app/ordens-servico'
-import { Route as AppFinanceiroRouteImport } from './routes/_app/financeiro'
-import { Route as AppEstoqueRouteImport } from './routes/_app/estoque'
-import { Route as AppConfiguracoesRouteImport } from './routes/_app/configuracoes'
-import { Route as AppClientesRouteImport } from './routes/_app/clientes'
 import { Route as AppAgendaRouteImport } from './routes/_app/agenda'
-import { Route as AppOrdensServicoIndexRouteImport } from './routes/_app/ordens-servico/index'
+import { Route as AppClientesRouteImport } from './routes/_app/clientes'
+import { Route as AppConfiguracoesRouteImport } from './routes/_app/configuracoes'
+import { Route as AppEstoqueRouteImport } from './routes/_app/estoque'
+import { Route as AppFinanceiroRouteImport } from './routes/_app/financeiro'
+import { Route as AppOrdensServicoRouteImport } from './routes/_app/ordens-servico'
+import { Route as AppRelatoriosRouteImport } from './routes/_app/relatorios'
 import { Route as AppClientesIndexRouteImport } from './routes/_app/clientes/index'
-import { Route as AppOrdensServicoNovaRouteImport } from './routes/_app/ordens-servico/nova'
-import { Route as AppOrdensServicoIdRouteImport } from './routes/_app/ordens-servico/$id'
-import { Route as AppClientesNovoRouteImport } from './routes/_app/clientes/novo'
 import { Route as AppClientesIdRouteImport } from './routes/_app/clientes/$id'
+import { Route as AppClientesNovoRouteImport } from './routes/_app/clientes/novo'
+import { Route as AppOrdensServicoIndexRouteImport } from './routes/_app/ordens-servico/index'
+import { Route as AppOrdensServicoIdRouteImport } from './routes/_app/ordens-servico/$id'
+import { Route as AppOrdensServicoNovaRouteImport } from './routes/_app/ordens-servico/nova'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -34,29 +34,9 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
-const AppRelatoriosRoute = AppRelatoriosRouteImport.update({
-  id: '/relatorios',
-  path: '/relatorios',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppOrdensServicoRoute = AppOrdensServicoRouteImport.update({
-  id: '/ordens-servico',
-  path: '/ordens-servico',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFinanceiroRoute = AppFinanceiroRouteImport.update({
-  id: '/financeiro',
-  path: '/financeiro',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppEstoqueRoute = AppEstoqueRouteImport.update({
-  id: '/estoque',
-  path: '/estoque',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
-  id: '/configuracoes',
-  path: '/configuracoes',
+const AppAgendaRoute = AppAgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
   getParentRoute: () => AppRoute,
 } as any)
 const AppClientesRoute = AppClientesRouteImport.update({
@@ -64,24 +44,49 @@ const AppClientesRoute = AppClientesRouteImport.update({
   path: '/clientes',
   getParentRoute: () => AppRoute,
 } as any)
-const AppAgendaRoute = AppAgendaRouteImport.update({
-  id: '/agenda',
-  path: '/agenda',
+const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
   getParentRoute: () => AppRoute,
 } as any)
-const AppOrdensServicoIndexRoute = AppOrdensServicoIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AppOrdensServicoRoute,
+const AppEstoqueRoute = AppEstoqueRouteImport.update({
+  id: '/estoque',
+  path: '/estoque',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFinanceiroRoute = AppFinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppOrdensServicoRoute = AppOrdensServicoRouteImport.update({
+  id: '/ordens-servico',
+  path: '/ordens-servico',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRelatoriosRoute = AppRelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppClientesIndexRoute = AppClientesIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppClientesRoute,
 } as any)
-const AppOrdensServicoNovaRoute = AppOrdensServicoNovaRouteImport.update({
-  id: '/nova',
-  path: '/nova',
+const AppClientesIdRoute = AppClientesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppClientesRoute,
+} as any)
+const AppClientesNovoRoute = AppClientesNovoRouteImport.update({
+  id: '/novo',
+  path: '/novo',
+  getParentRoute: () => AppClientesRoute,
+} as any)
+const AppOrdensServicoIndexRoute = AppOrdensServicoIndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => AppOrdensServicoRoute,
 } as any)
 const AppOrdensServicoIdRoute = AppOrdensServicoIdRouteImport.update({
@@ -89,15 +94,10 @@ const AppOrdensServicoIdRoute = AppOrdensServicoIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppOrdensServicoRoute,
 } as any)
-const AppClientesNovoRoute = AppClientesNovoRouteImport.update({
-  id: '/novo',
-  path: '/novo',
-  getParentRoute: () => AppClientesRoute,
-} as any)
-const AppClientesIdRoute = AppClientesIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AppClientesRoute,
+const AppOrdensServicoNovaRoute = AppOrdensServicoNovaRouteImport.update({
+  id: '/nova',
+  path: '/nova',
+  getParentRoute: () => AppOrdensServicoRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -218,39 +218,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/relatorios': {
-      id: '/_app/relatorios'
-      path: '/relatorios'
-      fullPath: '/relatorios'
-      preLoaderRoute: typeof AppRelatoriosRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/ordens-servico': {
-      id: '/_app/ordens-servico'
-      path: '/ordens-servico'
-      fullPath: '/ordens-servico'
-      preLoaderRoute: typeof AppOrdensServicoRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/financeiro': {
-      id: '/_app/financeiro'
-      path: '/financeiro'
-      fullPath: '/financeiro'
-      preLoaderRoute: typeof AppFinanceiroRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/estoque': {
-      id: '/_app/estoque'
-      path: '/estoque'
-      fullPath: '/estoque'
-      preLoaderRoute: typeof AppEstoqueRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/configuracoes': {
-      id: '/_app/configuracoes'
-      path: '/configuracoes'
-      fullPath: '/configuracoes'
-      preLoaderRoute: typeof AppConfiguracoesRouteImport
+    '/_app/agenda': {
+      id: '/_app/agenda'
+      path: '/agenda'
+      fullPath: '/agenda'
+      preLoaderRoute: typeof AppAgendaRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/clientes': {
@@ -260,19 +232,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppClientesRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/agenda': {
-      id: '/_app/agenda'
-      path: '/agenda'
-      fullPath: '/agenda'
-      preLoaderRoute: typeof AppAgendaRouteImport
+    '/_app/configuracoes': {
+      id: '/_app/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof AppConfiguracoesRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/ordens-servico/': {
-      id: '/_app/ordens-servico/'
-      path: '/'
-      fullPath: '/ordens-servico/'
-      preLoaderRoute: typeof AppOrdensServicoIndexRouteImport
-      parentRoute: typeof AppOrdensServicoRoute
+    '/_app/estoque': {
+      id: '/_app/estoque'
+      path: '/estoque'
+      fullPath: '/estoque'
+      preLoaderRoute: typeof AppEstoqueRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/financeiro': {
+      id: '/_app/financeiro'
+      path: '/financeiro'
+      fullPath: '/financeiro'
+      preLoaderRoute: typeof AppFinanceiroRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/ordens-servico': {
+      id: '/_app/ordens-servico'
+      path: '/ordens-servico'
+      fullPath: '/ordens-servico'
+      preLoaderRoute: typeof AppOrdensServicoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/relatorios': {
+      id: '/_app/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof AppRelatoriosRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/clientes/': {
       id: '/_app/clientes/'
@@ -281,11 +274,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppClientesIndexRouteImport
       parentRoute: typeof AppClientesRoute
     }
-    '/_app/ordens-servico/nova': {
-      id: '/_app/ordens-servico/nova'
-      path: '/nova'
-      fullPath: '/ordens-servico/nova'
-      preLoaderRoute: typeof AppOrdensServicoNovaRouteImport
+    '/_app/clientes/$id': {
+      id: '/_app/clientes/$id'
+      path: '/$id'
+      fullPath: '/clientes/$id'
+      preLoaderRoute: typeof AppClientesIdRouteImport
+      parentRoute: typeof AppClientesRoute
+    }
+    '/_app/clientes/novo': {
+      id: '/_app/clientes/novo'
+      path: '/novo'
+      fullPath: '/clientes/novo'
+      preLoaderRoute: typeof AppClientesNovoRouteImport
+      parentRoute: typeof AppClientesRoute
+    }
+    '/_app/ordens-servico/': {
+      id: '/_app/ordens-servico/'
+      path: '/'
+      fullPath: '/ordens-servico/'
+      preLoaderRoute: typeof AppOrdensServicoIndexRouteImport
       parentRoute: typeof AppOrdensServicoRoute
     }
     '/_app/ordens-servico/$id': {
@@ -295,19 +302,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOrdensServicoIdRouteImport
       parentRoute: typeof AppOrdensServicoRoute
     }
-    '/_app/clientes/novo': {
-      id: '/_app/clientes/novo'
-      path: '/novo'
-      fullPath: '/clientes/novo'
-      preLoaderRoute: typeof AppClientesNovoRouteImport
-      parentRoute: typeof AppClientesRoute
-    }
-    '/_app/clientes/$id': {
-      id: '/_app/clientes/$id'
-      path: '/$id'
-      fullPath: '/clientes/$id'
-      preLoaderRoute: typeof AppClientesIdRouteImport
-      parentRoute: typeof AppClientesRoute
+    '/_app/ordens-servico/nova': {
+      id: '/_app/ordens-servico/nova'
+      path: '/nova'
+      fullPath: '/ordens-servico/nova'
+      preLoaderRoute: typeof AppOrdensServicoNovaRouteImport
+      parentRoute: typeof AppOrdensServicoRoute
     }
   }
 }
@@ -373,12 +373,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

@@ -6,18 +6,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **MotoManage Pro** — a management system for a motorcycle repair shop (clients, vehicles,
 appointments, service orders with labor + parts, parts inventory with low-stock alerts, and
-billing) for a **single workshop** (not a multi-tenant SaaS — each workshop gets its own separate
-Supabase project + hosting).
+billing) for a **single workshop** (not a multi-tenant SaaS — each workshop runs its own
+self-hosted instance, own SQLite database file, own machine/server).
 
-Originally scaffolded by Blink (blink.new) with `@blinkdotnew/sdk` as the backend. That backend
-was fully removed — see "History" below. Everything now runs on Supabase.
+Originally scaffolded by Blink (blink.new) with `@blinkdotnew/sdk` as the backend, then rebuilt on
+Supabase (Postgres + Auth), then moved off Supabase entirely onto a small self-hosted
+Express + SQLite server with no login — see "History" below.
 
 ## Commands
 
 ```bash
-npm run dev              # dev server on :3000 (fixed port, strictPort)
-npm run build             # vite build (client+SSR) then flattens to dist/ (see Deployment)
-npm run preview           # preview the production build
+npm run dev              # runs the API server (:3001) + Vite dev server (:3000) together
+npm run build             # vite build -> dist/ (plain static SPA build, no SSR)
+npm run start             # node server/index.mjs — serves dist/ + the API (production)
+npm run preview           # preview the production Vite build only (no API — use `start` instead)
 npx tsc --noEmit          # type-check (fast, no dev server needed) — run this after any change
 npm run lint:types        # same as above
 npm run lint:js           # eslint
@@ -28,7 +30,7 @@ npm run lint              # runs all three via `bun run` — bun is NOT installe
 
 There is no test suite (no Jest/Vitest/Playwright config in the repo). Verification in this
 project has been done via manual `npx tsc --noEmit` + ad-hoc Playwright scripts run from outside
-the repo (not checked in, except `scripts/security_check_rls.mjs` — see below).
+the repo (not checked in).
 
 ## Domain model
 
@@ -51,38 +53,47 @@ the repo (not checked in, except `scripts/security_check_rls.mjs` — see below)
 
 ## Architecture
 
-### No custom backend — everything talks to Supabase directly from the browser
+### Small self-hosted backend — Express + SQLite, no login
 
-There is no Node/Express/serverless API layer. React components call `blink.db.table(...)` and
-`blink.auth.*` (see `src/blink/client.ts`), which call `@supabase/supabase-js` directly using the
-public anon key (`VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` in `.env`, gitignored). Security
-is enforced entirely by **Postgres Row Level Security** (`auth.uid() = user_id` on every table),
-not by an API layer — see `supabase-schema.sql`.
+`server/` is a plain Node/Express app (ESM, no TypeScript):
+`server/schema.mjs` declares the 8 tables + their allowed columns, `server/db.mjs` opens
+`better-sqlite3` at `data/motomanage.db` (path overridable via `DB_PATH`) and creates
+tables/indexes idempotently on boot, `server/index.mjs` exposes a generic REST API per table
+(`GET/POST /api/:table`, `GET/PATCH/DELETE /api/:table/:id`, `POST /api/:table/bulk`) validated
+against a table-name allowlist, and in production also serves `dist/` with an SPA fallback.
+
+There is **no authentication** — a single workshop uses this system, so the app opens straight
+into the dashboard. If a deployment is ever exposed beyond the workshop's own network, put it
+behind a VPN or the reverse proxy's own auth (see `docs/IMPLANTACAO.md`) rather than re-adding a
+login screen.
 
 `src/blink/client.ts` exports a `blink` object shaped like the original Blink SDK
-(`blink.auth.signIn/signUp/logout/...`, `blink.db.table(name).list/get/create/update/delete`) —
-this is a deliberate compatibility shim so route components didn't need to change when the
-backend was swapped. When adding a new table, extend `BACKUP_TABLES` in that file if it should be
-included in the Configuracoes export/import backup feature.
+(`blink.db.table(name).list/get/create/update/delete/createMany`) — a deliberate compatibility
+shim kept across two backend swaps (Blink SDK → Supabase → this Express/SQLite server) so route
+components never needed to change. It now calls `fetch('/api/...')` instead of Supabase. When
+adding a new table, add it to `server/schema.mjs`'s `TABLES` map and, if it should be included in
+the Configuracoes export/import backup feature, to `BACKUP_TABLES` in `client.ts`.
 
 Tables are queried with `.list()` (no server-side filtering beyond `orderBy`) and filtered
 client-side by foreign key (e.g. `items.filter((it) => it.service_order_id === id)`) — this
 mirrors the original template's pattern and keeps `blink.db.table()`'s surface small. Fine at
 single-workshop scale; revisit if a table grows large.
 
-### SQL migrations — must be run manually in the Supabase SQL Editor
+**Insert defaults**: `server/index.mjs`'s `buildInsertRow` only puts a column in the SQL `INSERT`
+when the request body actually provides it (id and the `created_at`/`opened_at`/`updated_at`
+timestamps are the exception — those get auto-filled when absent). This matters: explicitly
+inserting `NULL` for a `NOT NULL DEFAULT x` column is a constraint violation in SQL regardless of
+the column's default, so a column must be *omitted* from the statement, not sent as null, for
+`server/schema.mjs`'s `default` clauses to apply.
 
-There's no migration tool wired up. Every `supabase-*.sql` file in the repo root must be pasted
-into the target Supabase project's SQL Editor by hand, in roughly this order, before the
-corresponding feature works:
-- `supabase-schema.sql` — core tables (clients, vehicles, appointments, parts, service_orders,
-  service_order_items, transactions) + RLS
-- `supabase-indices.sql` — perf indices (RLS filters every query by `user_id`, so this matters)
-- `supabase-migration-workshop-branding.sql` — adds the `workshop_settings` table
+### Adding/changing tables — edit `server/schema.mjs`, no manual migration step
 
-If you add a feature needing a schema change, add a new `supabase-migration-*.sql` file (don't
-edit `supabase-schema.sql` after the fact) and tell the user to run it — there is no way to run
-DDL from the app itself (anon key can't do schema changes).
+Unlike the old Supabase setup (hand-run SQL in a web dashboard), schema changes are just code:
+edit the `createSql`/`indexes`/`columns` for a table in `server/schema.mjs` and restart the
+server — `CREATE TABLE IF NOT EXISTS`/`CREATE INDEX IF NOT EXISTS` run on every boot. Because
+these are `IF NOT EXISTS`, changing an *existing* column's type/constraints on a database that
+already has the old table requires a real migration (e.g. `ALTER TABLE` run once, or a version
+check in `db.mjs`) — plain edits to `createSql` only affect brand-new databases.
 
 ### Routing gotcha: file-based layout routes need `<Outlet/>`
 
@@ -93,17 +104,16 @@ doesn't render `<Outlet/>`, child routes silently never render (URL changes, con
 `() => <Outlet />` layouts; the actual list pages live at `.../index.tsx`. Keep this pattern in
 mind before adding new nested routes under an existing page.
 
-### Auth screen states (`src/components/AppLayout.tsx`)
+### Plain client-rendered SPA — no SSR
 
-`AppLayout` branches on `useAuth()` state in this order: `isPasswordRecovery` (show
-`NewPasswordScreen`) → `isLoading` (skeleton) → `!isAuthenticated` (show `AuthScreen`, which
-itself has signin/signup/forgot-password modes) → authenticated app shell. `useAuth`
-(`src/hooks/useAuth.ts`) wraps `blink.auth.onAuthStateChanged`.
-
-The whole authenticated app (`src/routes/_app.tsx` and everything under `_app/`) is wrapped in
-`<BlinkClientBoundary>` (a `ClientOnly` from TanStack Router) — these routes never actually
-render on the server, only a static skeleton fallback. This is why `localStorage`/`window`/
-`blink.auth` reads are safe in page components: they only ever run in the browser.
+This used to run on TanStack Start (SSR + prerendering, for SEO/crawlers). That's gone: this is
+an internal, no-login admin tool with no public/crawlable content, so it's a standard Vite +
+React SPA — `index.html` + `src/main.tsx` mount `RouterProvider` into `#root`, and
+`src/routes/__root.tsx` is just `() => <Outlet />`. Per-route `head()` meta configs still exist on
+some routes but are inert (nothing renders `<HeadContent/>`) — the browser tab title is the
+static one in `index.html`. `vite.config.ts` proxies `/api` to the Express server in dev
+(`server.proxy`); in production the same Express process serves both `dist/` and `/api`, so
+there's never a cross-origin call to worry about.
 
 ### WhatsApp reminders (`src/lib/whatsapp.ts`)
 
@@ -114,19 +124,15 @@ Message text intentionally avoids most accented characters (repo convention, see
 
 ### Workshop branding (`src/hooks/useWorkshopBranding.ts`, `workshop_settings` table)
 
-Workshop name/logo are **not** stored in Supabase Auth user metadata — metadata is embedded in
-the JWT on every request, and an image there would bloat every authenticated call. They live in
-their own `workshop_settings` table instead, fetched with a plain query. That table's SELECT
-policy is intentionally public (`using (true)`) so the logo/name can render on the pre-login
-screen too — this is safe only because each deployment is single-tenant (one workshop's Supabase
-project), so a public-read row is that workshop's own public branding, not cross-tenant leakage.
+Workshop name/logo live in their own `workshop_settings` table (no auth/user concept to hang them
+off anymore), fetched with a plain query and rendered in the sidebar/mobile top bar.
 
 ### CSV client import (`src/lib/clientImport.ts`)
 
 Auto-detects common Portuguese/English column headers (accent- and case-insensitive) via
 `CLIENT_FIELDS`/`FIELD_ALIASES`, shows a mapping + preview before writing anything, then bulk
-inserts via `blink.db.table(...).createMany()` (added specifically to avoid one Supabase request
-per CSV row). Deliberately does **not** support `.xlsx` — both browser-side Excel-parsing
+inserts via `blink.db.table(...).createMany()` (one `POST /api/clients/bulk` request instead of
+one per CSV row). Deliberately does **not** support `.xlsx` — both browser-side Excel-parsing
 libraries available on npm (`xlsx`/SheetJS, `exceljs`) carry known unpatched vulnerabilities or a
 large added dependency surface; users are asked to export their spreadsheet to CSV first instead.
 
@@ -142,9 +148,6 @@ sidebar (`aside`) and mobile top bar so only the order content prints.
   `Configurações`, `nao` not `não`) — a repo-wide style from the original scaffold, kept for
   consistency. New user-facing strings should generally follow suit unless already inconsistent
   nearby.
-- `src/layouts/shared-app-layout.tsx`, `src/Shell.tsx`, `src/components/AppSidebarShell.tsx` are
-  unused template leftovers, not wired into any route — don't extend them; the real layout is
-  `src/components/AppLayout.tsx` + `src/components/AppSidebar.tsx`.
 - `src/assets/hero.png` shows as permanently "modified" in `git status`/`git diff` — a pre-existing
   Git LFS quirk (the blob was committed as raw binary, not an LFS pointer, so the LFS clean filter
   keeps re-flagging it). It's cosmetic; don't try to "fix" it as part of unrelated work, and don't
@@ -156,6 +159,8 @@ sidebar (`aside`) and mobile top bar so only the order content prints.
   later" dependency, check it's actually imported before it lands in `package.json`.
 - `npm install` needs `--legacy-peer-deps` in this repo (`@tailwindcss/vite` wants Vite 5-7, the
   project pins Vite 8) — this is expected, not a sign something is broken.
+- `data/` (the SQLite database file + its WAL/SHM sidecar files) is gitignored — it's this
+  workshop's live data, never shared/committed.
 - Google Calendar sync (present in the original dental-clinic template this was converted from)
   was intentionally dropped as out-of-scope for the initial conversion — appointments are
   workshop-local only. Re-add via `src/lib/googleCalendar.ts`-style client-only OAuth (Google
@@ -165,8 +170,9 @@ sidebar (`aside`) and mobile top bar so only the order content prints.
 
 This was originally a Blink-generated template using `@blinkdotnew/sdk` for both auth and data
 storage, then converted to **OdontoManage Pro** (a dental clinic system) on Supabase, then
-repurposed into **MotoManage Pro** for a motorcycle repair shop — the domain tables
-(patients/appointments/transactions/medical_records) were replaced with
-clients/vehicles/appointments/parts/service_orders/service_order_items/transactions. If you see
-any reference to `@blinkdotnew/sdk`, `blink.new`, dental/patient terminology, or Google Calendar
-sync outside of historical context, that's leftover/dead.
+repurposed into **MotoManage Pro** for a motorcycle repair shop (domain tables became
+clients/vehicles/appointments/parts/service_orders/service_order_items/transactions), then moved
+off Supabase entirely onto a self-hosted Express + SQLite backend with no login (single workshop,
+no need for accounts). If you see any reference to `@blinkdotnew/sdk`, `blink.new`, Supabase,
+Row Level Security, dental/patient terminology, or Google Calendar sync outside of historical
+context, that's leftover/dead.

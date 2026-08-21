@@ -10,9 +10,11 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-.vite-out
 *.local
 .env
+
+# Local SQLite database (per-workshop data — never shared/committed)
+data/
 
 # Editor directories and files
 .vscode/*
