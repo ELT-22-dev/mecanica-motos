@@ -74,17 +74,23 @@ dados e decisões de design.
 
 ## Modo demonstração (portfólio, sem backend)
 
-Para publicar como amostra (ex: Vercel), existe um modo 100% front-end: em vez de chamar a API,
-`src/blink/client.ts` usa `src/blink/localStore.ts` (dados em `localStorage` do navegador),
-semeados com um cenário de exemplo por `src/blink/demoSeed.ts`. Ativa com a variável de ambiente
-`VITE_DEMO_MODE=true` no build:
+Este repositório fica só com o código-fonte, sem nenhum site publicado — mas existe um modo
+100% front-end para rodar/mostrar o sistema sem precisar montar o backend: em vez de chamar a
+API, `src/blink/client.ts` usa `src/blink/localStore.ts` (dados em `localStorage` do navegador),
+semeados com um cenário de exemplo por `src/blink/demoSeed.ts`. Basta buildar com a variável de
+ambiente `VITE_DEMO_MODE=true`:
 
 ```bash
-VITE_DEMO_MODE=true npm run build   # gera dist/ sem nenhuma dependencia de backend
+VITE_DEMO_MODE=true npm run build
+npm run preview   # abre o build em http://localhost:4173, sem nenhum servidor de API rodando
 ```
 
-Na Vercel: configurar `VITE_DEMO_MODE=true` nas variáveis de ambiente do projeto (framework preset
-Vite, comando de build padrão `npm run build`). O `vercel.json` já cuida do fallback de rotas do
-SPA. Um badge "DEMO" aparece na barra lateral sempre que esse modo está ativo, e um botão em
-Configuracoes permite restaurar os dados de exemplo a qualquer momento. **Isso não é como o
-sistema roda de verdade para uma oficina** — para isso, veja `docs/IMPLANTACAO.md`.
+Um badge "DEMO" aparece na barra lateral sempre que esse modo está ativo, e um botão em
+Configuracoes permite restaurar os dados de exemplo a qualquer momento. Se um dia quiser publicar
+isso em algum lugar (GitHub Pages, Netlify, etc.), a variável `VITE_BASE_PATH` (lida em
+`vite.config.ts`) ajusta os caminhos dos arquivos caso a hospedagem sirva de um subcaminho em vez
+da raiz do domínio, e `src/router.tsx` já usa navegação por hash (`#/rota`) neste modo para
+funcionar em qualquer hospedagem estática sem configuração de rewrite.
+
+**Isso não é como o sistema roda de verdade para uma oficina** — para isso, veja
+`docs/IMPLANTACAO.md`.

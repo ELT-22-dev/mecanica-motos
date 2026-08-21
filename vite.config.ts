@@ -7,6 +7,11 @@ import path from 'path';
 const API_PORT = process.env.API_PORT || 3001;
 
 export default defineConfig({
+  // Only set for the GitHub Pages demo build, which is served from a project
+  // subpath (https://<user>.github.io/<repo>/) instead of a domain root — see
+  // .github/workflows/deploy-demo.yml. Defaults to root for every other build
+  // (the self-hosted production server serves dist/ from its own domain root).
+  base: process.env.VITE_BASE_PATH || '/',
   plugins: [
     // Tailwind v4 via the official Vite plugin.
     tailwindcss(),

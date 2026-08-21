@@ -122,22 +122,32 @@ Not an API integration — just builds a `wa.me`/`api.whatsapp.com` deep link wi
 backend. Used for appointment reminders (agenda) and "your bike is ready" messages (OS detail).
 Message text intentionally avoids most accented characters (repo convention, see below).
 
-### Portfolio/demo build (`VITE_DEMO_MODE=true`, deployed on Vercel)
+### Portfolio/demo build (`VITE_DEMO_MODE=true`, not deployed anywhere — repo is source-only)
 
-The real product (above) needs a persistent Node process, which Vercel can't run — so for showing
-the app to prospective clients as a portfolio piece, there's a second build mode that needs no
-backend at all: `src/blink/localStore.ts` re-implements the same `list/get/create/update/delete/
-createMany` surface on top of `localStorage`, and `src/blink/client.ts` picks it over the real
-`fetch('/api/...')` client whenever `import.meta.env.VITE_DEMO_MODE === 'true'` (set as a Vercel
-project env var — Vite bakes it in at build time). `src/blink/demoSeed.ts` seeds realistic example
-data into that visitor's browser on first load (`seedDemoDataIfNeeded()`, called from
-`src/main.tsx`) and never overwrites what they create/edit afterwards; a "Restaurar dados de
-demonstracao" button in Configuracoes (demo-mode-only) wipes and re-seeds it via
-`resetDemoData()`. A small "DEMO" badge renders next to the workshop name (`AppSidebar`/
-`AppLayout`) whenever this mode is active, so it's never mistaken for the real system. `vercel.json`
-adds the SPA-fallback rewrite Vercel needs for client-side routing. This mode is for demonstration
-only — it is NOT what a real workshop deployment uses (that's the self-hosted Express+SQLite path
-above), and data here never leaves the visitor's own browser.
+This repo intentionally has no live deployment/CI (no GitHub Actions, no Pages, no Vercel) — it's
+meant to stay a plain source repository. There is still a backend-free build mode, useful for
+running the app locally without setting up the real server, or if a live demo is wanted again
+later: `src/blink/localStore.ts` re-implements the same `list/get/create/update/delete/createMany`
+surface on top of `localStorage`, and `src/blink/client.ts` picks it over the real
+`fetch('/api/...')` client whenever `import.meta.env.VITE_DEMO_MODE === 'true'` (Vite bakes it in
+at build time). `src/blink/demoSeed.ts` seeds realistic example data into that visitor's browser on
+first load (`seedDemoDataIfNeeded()`, called from `src/main.tsx`) and never overwrites what they
+create/edit afterwards; a "Restaurar dados de demonstracao" button in Configuracoes
+(demo-mode-only) wipes and re-seeds it via `resetDemoData()`. A small "DEMO" badge renders next to
+the workshop name (`AppSidebar`/`AppLayout`) whenever this mode is active, so it's never mistaken
+for the real system:
+
+```bash
+VITE_DEMO_MODE=true npm run build && npm run preview
+```
+
+Two other things are gated the same way, dormant unless this mode (or a future static deployment)
+needs them: `src/router.tsx` switches to `createHashHistory()` when `DEMO_MODE`, so the whole
+route path lives after a `#` and a direct link or page refresh never 404s on a static host with no
+server-side rewrite support; `vite.config.ts`'s `base` reads `VITE_BASE_PATH` (defaults to `/`), for
+a host that serves from a subpath instead of a domain root. This mode is for demonstration only —
+it is NOT what a real workshop deployment uses (that's the self-hosted Express+SQLite path above),
+and data here never leaves the visitor's own browser.
 
 ### Workshop branding (`src/hooks/useWorkshopBranding.ts`, `workshop_settings` table)
 
