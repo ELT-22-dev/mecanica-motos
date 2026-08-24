@@ -1,5 +1,10 @@
 [phases.install]
-cmds = ["npm install -g npm@latest", "rm -f package-lock.json", "npm install"]
+cmds = [
+  "npm install -g npm@latest",
+  "rm -f package-lock.json",
+  "npm install",
+  "npm install @rolldown/binding-linux-x64-gnu@1.1.5 --no-save --force",
+]
 
 [phases.build]
 cmds = ["npm run build"]
